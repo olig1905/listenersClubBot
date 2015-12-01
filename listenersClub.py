@@ -24,11 +24,11 @@ class Bot:
         self.reddit.login(self.user_name, self.password)
 
     def save_data(self):
-        with open(STATE_DATA, 'wb') as output_file: # probably need to close the file that was opened
+        with open(STATE_DATA, 'wb') as output_file:
             pickle.dump(self.data, output_file, pickle.HIGHEST_PROTOCOL)
 
     def load_data(self):
-        with open(STATE_DATA, 'rb') as input_file: # close file
+        with open(STATE_DATA, 'rb') as input_file:
             self.data = pickle.load(input_file)
 
     def check_messages(self):
