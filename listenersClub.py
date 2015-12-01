@@ -1,11 +1,9 @@
-#TODO: ReFactor badly named things.. like CONFIG_FILE (that aint a config file)
-
 import praw
 import os
 import time
 import pickle
 
-CONFIG_FILE = "botConfig.pkl"
+STATE_DATA = "botStateData.pkl"
 SUBREDDIT = ""
 USER_NAME = ""
 PASSWORD = ""
@@ -17,21 +15,21 @@ class Bot:
         self.password = password
         self.reddit = praw.Reddit(user_agent)
         self.connect()
-        if os.path.isfile(CONFIG_FILE):
-            self.load_config()
+        if os.path.isfile(STATE_DATA):
+            self.load_data()
         else:
-            self.config = Config()
+            self.data = Data()
 
     def connect(self):
         self.reddit.login(self.user_name, self.password)
 
-    def save_config(self):
-        with open(CONFIG_FILE, 'wb') as output_file:
-            pickle.dump(self.config, output_file, pickle.HIGHEST_PROTOCOL)
+    def save_data(self):
+        with open(STATE_DATA, 'wb') as output_file: # probably need to close the file that was opened
+            pickle.dump(self.data, output_file, pickle.HIGHEST_PROTOCOL)
 
-    def load_config(self):
-        with open(CONFIG_FILE, 'rb') as input_file:
-            self.config = pickle.load(input_file)
+    def load_data(self):
+        with open(STATE_DATA, 'rb') as input_file: # close file
+            self.data = pickle.load(input_file)
 
     def check_messages(self):
         messages = self.reddit.get_unread(limit=None)
@@ -41,7 +39,7 @@ class Bot:
             msg.mark_as_read()
 
     def check_events(self):
-        for event in self.config.events:
+        for event in self.data.events:
             if not event.run_today:
                 if time.strftime("%A") == event.album_day:
                     self._post_album()
@@ -54,7 +52,7 @@ class Bot:
                             if event.post_count != 1:
                                 event.post_count -= 1
                             else:
-                                self.config.events.remove(event)
+                                self.data.events.remove(event)
                     event.run_today = True
             elif time.strftime("%A") != event.album_day and time.strftime("%A") != event.analysis_day and event.run_today:
                 event.run_today = False
@@ -67,7 +65,7 @@ class Bot:
                     return True
             return False
         elif level == 'User':
-            for user in self.config.user_list:
+            for user in self.data.user_list:
                 if user.name == name:
                     return True
             return False
@@ -75,7 +73,7 @@ class Bot:
             return False
 
     def _post_album_to_reddit(self, album):
-        post_body = "This Weeks Album Has Been Picked By /u/" + self.config.user_list[self.config.user_index].name
+        post_body = "This Weeks Album Has Been Picked By /u/" + self.data.user_list[self.data.user_index].name
         post_body = post_body + "\n\n## ["+ album.artist +" - "+ album.album_title + "]("+album.link1+")\n\n### Details and Synopsis\n\n"
         post_body = post_body + "Release Detail | Value\n---|---:\n**Year** | " +  album.year +"\n**Length** | " + album.length + "\n**Label** | " +  album.label +"\n**Genre** | " + album.genre
         post_body = post_body + "\n\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n\n"
@@ -87,51 +85,51 @@ class Bot:
 
         post_body = post_body + "\n\n### Selection Reason\n\n" + album.selection_reason
         print(post_body)
-        self.reddit.submit(SUBREDDIT, "Week "+ str(self.config.week) + ": " + album.artist + " = " + album.album_title, text=str(post_body), send_replies=False)
+        self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " = " + album.album_title, text=str(post_body), send_replies=False)
 
     def _post_album(self):
-        if self.config.user_index == len(self.config.user_list):
-            self.config.user_index = 0
-        old_index = self.config.user_index
+        if self.data.user_index == len(self.data.user_list):
+            self.data.user_index = 0
+        old_index = self.data.user_index
         found = False
-        print(len(self.config.user_list[self.config.user_index].submissions))
-        if len(self.config.user_list[self.config.user_index].submissions) > 0:
-            album = self.config.user_list[self.config.user_index].submissions[0]
+        print(len(self.data.user_list[self.data.user_index].submissions))
+        if len(self.data.user_list[self.data.user_index].submissions) > 0:
+            album = self.data.user_list[self.data.user_index].submissions[0]
             self._post_album_to_reddit(album)
             album.posted = True
             found = True
         else:
-            self.config.user_index += 1
-            if self.config.user_index == len(self.config.user_list):
-                self.config.user_index = 0
+            self.data.user_index += 1
+            if self.data.user_index == len(self.data.user_list):
+                self.data.user_index = 0
 
         while not found:
-            if len(self.config.user_list[self.config.user_index].submissions) > 0:
-                album = self.config.user_list[self.config.user_index].submissions[0]
+            if len(self.data.user_list[self.data.user_index].submissions) > 0:
+                album = self.data.user_list[self.data.user_index].submissions[0]
                 self._post_album_to_reddit(album)
                 album.posted = True
                 found = True
             else:
-                if self.config.user_index == old_index:
+                if self.data.user_index == old_index:
                     return False
-                self.config.user_index += 1
-                if self.config.user_index == len(self.config.user_list):
-                    self.config.user_index = 0
+                self.data.user_index += 1
+                if self.data.user_index == len(self.data.user_list):
+                    self.data.user_index = 0
 
     def _post_analysis(self):
-        if len(self.config.user_list[self.config.user_index].submissions) > 0:
-            album = self.config.user_list[self.config.user_index].submissions[0]
+        if len(self.data.user_list[self.data.user_index].submissions) > 0:
+            album = self.data.user_list[self.data.user_index].submissions[0]
             if not album.posted:
                 return False
-            post_body = "This Weeks Album Is '" + album.artist + " - " + album.album_title + "'  Picked By /u/" + self.config.user_list[self.config.user_index].name
+            post_body = "This Weeks Album Is '" + album.artist + " - " + album.album_title + "'  Picked By /u/" + self.data.user_list[self.data.user_index].name
             post_body = post_body + "\n\n### Analysis Questions\n\n" + album.analysis_questions
-            self.reddit.submit(SUBREDDIT, "Week "+ str(self.config.week) + ": " + album.artist + " - " + album.album_title +" [ANALYSIS THREAD]", text=str(post_body), send_replies=False)
+            self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " - " + album.album_title +" [ANALYSIS THREAD]", text=str(post_body), send_replies=False)
             print(album.analysis_questions)
-            self.config.week += 1
-            print(str(len(self.config.user_list[self.config.user_index].submissions)))
-            self.config.user_list[self.config.user_index].submissions.pop(0)
-            print(str(len(self.config.user_list[self.config.user_index].submissions)))
-            self.config.user_index += 1
+            self.data.week += 1
+            print(str(len(self.data.user_list[self.data.user_index].submissions)))
+            self.data.user_list[self.data.user_index].submissions.pop(0)
+            print(str(len(self.data.user_list[self.data.user_index].submissions)))
+            self.data.user_index += 1
         else:
             return False
         return True
@@ -186,37 +184,37 @@ class Bot:
             return success
 
     def _add_user(self, user_name):
-        for user in self.config.user_list:
+        for user in self.data.user_list:
             if user.name == user_name:
                 return "Error: User Already Added!"
-        self.config.user_list.append(User(user_name))
+        self.data.user_list.append(User(user_name))
         return True
 
     def _add_event(self, user_name, album_day, analysis_day, post_count, event_post_type):
-        for user in self.config.user_list:
+        for user in self.data.user_list:
             if user.name == user_name:
-                for event in self.config.events:
+                for event in self.data.events:
                     if event.analysis_day == analysis_day and event.album_day == album_day:
                         return "Error: Event already Added"
-                self.config.events.append(Event(album_day, analysis_day, post_count, event_post_type))
+                self.data.events.append(Event(album_day, analysis_day, post_count, event_post_type))
                 return True
         return "Error: User Name Not Recognised!"
 
     def _add_album(self, user_name, args):
         #TODO: verify no one has added album
-        for user in self.config.user_list:
+        for user in self.data.user_list:
             print(user.name + user_name)
             if user.name == user_name:
                 return user.add_submission(args)
         return "Error: User Name Not Recognised!"
 
     def _get_user_list(self):
-        if len(self.config.user_list) != 0:
-            return self.config.user_list
+        if len(self.data.user_list) != 0:
+            return self.data.user_list
         else:
             return "Error: No Users Added!"
 
-class Config:
+class Data:
     def __init__(self):
         self.week = 0
         self.user_index = 0
@@ -277,5 +275,5 @@ bot = Bot(USER_AGENT, USER_NAME, PASSWORD)
 while True:
     bot.check_messages()
     bot.check_events()
-    bot.save_config()
+    bot.save_data()
     time.sleep(10)
