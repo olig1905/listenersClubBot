@@ -233,7 +233,6 @@ class Event:
 
 class User:
     usrpost_count = 0
-    currentNumber = 0
 
     def __init__(self, name):
         self.name = name
@@ -270,7 +269,7 @@ class Submission:
             self.link3 = args[11]
         else:
             self.link3 = "NULL"
-##########MAIN##############
+##########MAIN###########
 bot = Bot(USER_AGENT, USER_NAME, PASSWORD)
 while True:
     bot.check_messages()
