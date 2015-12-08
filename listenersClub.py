@@ -13,7 +13,6 @@ OAUTH_CONF_FILE = "./config/oauth.ini"
 class Bot:
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
-        self.password = ''
         self.reddit = praw.Reddit(user_agent)
         self.oauth = OAuth2Util.OAuth2Util(self.reddit, configfile=OAUTH_CONF_FILE)
         self.oauth.refresh(force=True)
