@@ -1,3 +1,4 @@
+import OAuth2Util
 import praw
 import os
 import time
@@ -6,22 +7,19 @@ import pickle
 STATE_DATA = "botStateData.pkl"
 SUBREDDIT = ""
 USER_NAME = ""
-PASSWORD = ""
 USER_AGENT = ""
+OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
-    def __init__(self, user_agent, user_name, password):
+    def __init__(self, user_agent, user_name):
         self.user_name = user_name
-        self.password = password
         self.reddit = praw.Reddit(user_agent)
-        self.connect()
+        self.oauth = OAuth2Util.OAuth2Util(self.reddit, configfile=OAUTH_CONF_FILE)
+        self.oauth.refresh(force=True)
         if os.path.isfile(STATE_DATA):
             self.load_data()
         else:
             self.data = Data()
-
-    def connect(self):
-        self.reddit.login(self.user_name, self.password)
 
     def save_data(self):
         with open(STATE_DATA, 'wb') as output_file:
@@ -35,6 +33,7 @@ class Bot:
         messages = self.reddit.get_unread(limit=None)
         for msg in reversed(list(messages)):
             response = self._parse_command(msg)
+            print(response)
             msg.reply(response)
             msg.mark_as_read()
 
@@ -73,19 +72,23 @@ class Bot:
             return False
 
     def _post_album_to_reddit(self, album):
-        post_body = "This Weeks Album Has Been Picked By /u/" + self.data.user_list[self.data.user_index].name
-        post_body = post_body + "\n\n## ["+ album.artist +" - "+ album.album_title + "]("+album.link1+")\n\n### Details and Synopsis\n\n"
-        post_body = post_body + "Release Detail | Value\n---|---:\n**Year** | " +  album.year +"\n**Length** | " + album.length + "\n**Label** | " +  album.label +"\n**Genre** | " + album.genre
-        post_body = post_body + "\n\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n\n"
-        post_body = post_body + album.description + "\n\n### Links\n\n*" + "[" + album.link1 + "](" + album.link1 + ")"
-        if album.link2 != "NULL":
-            post_body = post_body + "\n*" + "[" + album.link2 + "](" + album.link2 + ")"
-        if album.link3 != "NULL":
-            post_body = post_body + "\n*" + "[" + album.link3 + "](" + album.link3 + ")"
-
-        post_body = post_body + "\n\n### Selection Reason\n\n" + album.selection_reason
+        post_body = self._generate_post_body(album)
         print(post_body)
         self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " = " + album.album_title, text=str(post_body), send_replies=False)
+
+    def _generate_post_body(self, album):
+        post_body = "This Weeks Album Has Been Picked By /u/" + self.data.user_list[self.data.user_index].name
+        post_body += "\n\n## ["+ album.artist +" - "+ album.album_title + "]("+album.link1+")\n\n### Details and Synopsis\n\n"
+        post_body += "Release Detail | Value\n---|---:\n**Year** | " +  album.year +"\n**Length** | " + album.length + "\n**Label** | " +  album.label +"\n**Genre** | " + album.genre
+        post_body += "\n\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n\n"
+        post_body += album.description + "\n\n### Links\n\n*" + "[" + album.link1 + "](" + album.link1 + ")"
+        if album.link2 != "NULL":
+            post_body += "\n*" + "[" + album.link2 + "](" + album.link2 + ")"
+        if album.link3 != "NULL":
+            post_body += "\n*" + "[" + album.link3 + "](" + album.link3 + ")"
+
+        post_body += "\n\n### Selection Reason\n\n" + album.selection_reason
+        return post_body
 
     def _post_album(self):
         if self.data.user_index == len(self.data.user_list):
@@ -122,7 +125,7 @@ class Bot:
             if not album.posted:
                 return False
             post_body = "This Weeks Album Is '" + album.artist + " - " + album.album_title + "'  Picked By /u/" + self.data.user_list[self.data.user_index].name
-            post_body = post_body + "\n\n### Analysis Questions\n\n" + album.analysis_questions
+            post_body += "\n\n### Analysis Questions\n\n" + album.analysis_questions
             self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " - " + album.album_title +" [ANALYSIS THREAD]", text=str(post_body), send_replies=False)
             print(album.analysis_questions)
             self.data.week += 1
@@ -175,7 +178,7 @@ class Bot:
             else:
                 success = "Error: Invalid Number of Arguments"
         else:
-            print("BAD CMD")
+            print("BAD CMD: " + cmd)
             success = "Error: Invalid Command"
 
         if success:
@@ -270,7 +273,7 @@ class Submission:
         else:
             self.link3 = "NULL"
 ##########MAIN###########
-bot = Bot(USER_AGENT, USER_NAME, PASSWORD)
+bot = Bot(USER_AGENT, USER_NAME)
 while True:
     bot.check_messages()
     bot.check_events()
