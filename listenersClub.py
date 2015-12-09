@@ -37,25 +37,13 @@ class Bot:
             print(response)
             msg.reply(response)
             msg.mark_as_read()
-    # involved
+    # involved - cleared
     def check_events(self):
         for event in self.data.events:
-            if not event.run_today:
-                if time.strftime("%A") == event.album_day: ####
-                    self._post_album() 
-                    if time.strftime("%A") != event.analysis_day: # delete
-                        event.run_today = True #?
-                if time.strftime("%A") == event.analysis_day: # merge
-                    success = self._post_analysis()
-                    if success:
-                        if event.post_count != 0:
-                            if event.post_count != 1:
-                                event.post_count -= 1
-                            else:
-                                self.data.events.remove(event)
-                    event.run_today = True
-            elif time.strftime("%A") != event.album_day and time.strftime("%A") != event.analysis_day and event.run_today:
-                event.run_today = False
+            if time.strftime("%A") == event.post_day:
+                success = self._post_album()
+                if success:
+                    self.data.events.remove(event)
     # clear
     def _authenticate_user(self, name, level):
         if level == 'Mod':
@@ -227,10 +215,8 @@ class Data:
 # involved
 class Event:
     eventpost_count = 0
-    def __init__(self, album_day, analysis_day, post_count, post_type):
-        #self.album_day = album_day
-        #self.analysis_day = analysis_day
-        self.post_day = post_day # combine of album_day and analysis_day
+    def __init__(self, post_day, post_count, post_type):
+        self.post_day = post_day
         self.post_count = post_count
         self.post_type = post_type #list or username
         self.run_today = False
