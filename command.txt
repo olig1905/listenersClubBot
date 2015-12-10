@@ -8,5 +8,5 @@ Body: Arguments;separated;by;semi;colons
 ADD-USER: username *Mod Only*
 GET-USERS: ?
 ADD-ALBUM: Artist;AlbumTitle;Year;Length;Genre;Label;Description;SelectionReason;AnalysisQuestions;link1;link2;link... *Added users only
-POST-ALBUM: Album day;Analysis Day;freq;type {type=list, freq=0}
+POST-ALBUM: Post Day;freq;type {type=list, freq=0}
 

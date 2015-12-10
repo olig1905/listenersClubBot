@@ -59,12 +59,12 @@ class Bot:
             return False
         else:
             return False
-    # involved
+    # involved - cleared
     def _post_album_to_reddit(self, album):
         post_body = self._generate_post_body(album)
         print(post_body)
         self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " = " + album.album_title, text=str(post_body), send_replies=False)
-    # involved
+    # involved - cleared
     def _generate_post_body(self, album):
         post_body = "This Weeks Album Has Been Picked By /u/" + self.data.user_list[self.data.user_index].name
         post_body += "\n\n## ["+ album.artist +" - "+ album.album_title + "]("+album.link1+")\n\n### Details and Synopsis\n\n"
@@ -75,8 +75,9 @@ class Bot:
             post_body += "\n*" + "[" + album.link2 + "](" + album.link2 + ")"
         if album.link3 != "NULL":
             post_body += "\n*" + "[" + album.link3 + "](" + album.link3 + ")"
-
         post_body += "\n\n### Selection Reason\n\n" + album.selection_reason
+        post_body += "\n\n### Analysis Questions\n\n" + album.analysis_questions
+
         return post_body
     # involved
     def _post_album(self):
@@ -88,8 +89,14 @@ class Bot:
         if len(self.data.user_list[self.data.user_index].submissions) > 0:
             album = self.data.user_list[self.data.user_index].submissions[0]
             self._post_album_to_reddit(album)
-            album.posted = True
+            album.posted = True # Is this needed?
             found = True
+            # moved from _post_analysis
+            self.data.week += 1
+            print(str(len(self.data.user_list[self.data.user_index].submissions)))
+            self.data.user_list[self.data.user_index].submissions.pop(0)
+            print(str(len(self.data.user_list[self.data.user_index].submissions)))
+            self.data.user_index += 1
         else:
             self.data.user_index += 1
             if self.data.user_index == len(self.data.user_list):
@@ -107,25 +114,7 @@ class Bot:
                 self.data.user_index += 1
                 if self.data.user_index == len(self.data.user_list):
                     self.data.user_index = 0
-    # involved
-    def _post_analysis(self):
-        if len(self.data.user_list[self.data.user_index].submissions) > 0: #remove
-            album = self.data.user_list[self.data.user_index].submissions[0] #remove
-            if not album.posted:
-                return False
-            post_body = "This Weeks Album Is '" + album.artist + " - " + album.album_title + "'  Picked By /u/" + self.data.user_list[self.data.user_index].name
-            post_body += "\n\n### Analysis Questions\n\n" + album.analysis_questions
-            self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " - " + album.album_title +" [ANALYSIS THREAD]", text=str(post_body), send_replies=False)
-            print(album.analysis_questions)
-            self.data.week += 1 # move to _post_album?
-            print(str(len(self.data.user_list[self.data.user_index].submissions)))
-            self.data.user_list[self.data.user_index].submissions.pop(0)
-            print(str(len(self.data.user_list[self.data.user_index].submissions)))
-            self.data.user_index += 1
-        else:
-            return False
-        return True
-    # involved
+    # involved - cleared
     def _parse_command(self, msg):
         cmd = msg.subject
         args = msg.body
@@ -158,10 +147,9 @@ class Bot:
             else:
                 success = "Error: Too Few Arguments to add Album"
         elif cmd == "POST-ALBUM":
-            if len(args) == 4:
+            if len(args) == 3:
                 if self._authenticate_user(msg.author.name, 'Mod'):
-                    print("Post Album: " + args[0] + " on " + args[1] + args[2] + "times for " + args[3])
-                    success = self._add_event(msg.author.name, args[0], args[1], int(args[2]), args[3])
+                    success = self._add_event(msg.author.name, args[0], int(args[1]), args[2])
                 else:
                     success = "Error: You do not have the correct permissions for this command!"
             else:
@@ -214,13 +202,10 @@ class Data:
         self.events = []
 # involved
 class Event:
-    eventpost_count = 0
     def __init__(self, post_day, post_count, post_type):
         self.post_day = post_day
         self.post_count = post_count
         self.post_type = post_type #list or username
-        self.run_today = False
-        Event.eventpost_count += 1
 # clear
 class User:
     usrpost_count = 0
@@ -238,7 +223,7 @@ class User:
                 return "Submission already added!"
         self.submissions.append(Submission(new_album))
         return True
-# involved
+# involved - cleared
 class Submission:
     def __init__(self, args):
         self.posted = False
@@ -250,7 +235,7 @@ class Submission:
         self.label = args[5]
         self.description = args[6]
         self.selection_reason = args[7]
-        self.analysis_questions = args[8] # will be moved to the end of post album
+        self.analysis_questions = args[8]
         self.link1 = args[9]
         if len(args) == 11:
             self.link2 = args[10]
