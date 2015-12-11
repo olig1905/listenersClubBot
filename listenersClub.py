@@ -43,11 +43,8 @@ class Bot:
             msg.mark_as_read()
     # involved - cleared
     def check_events(self):
-        for event in self.data.events:
-            if time.strftime("%A") == event.post_day:
-                success = self._post_album()
-                if success:
-                    self.data.events.remove(event)
+        if time.strftime("%A") == self.data.post_day:
+            success = self._post_album() # remove album after it is posted
     # clear
     def _authenticate_user(self, name, level):
         if level == 'Mod':
@@ -170,15 +167,9 @@ class Bot:
         self.data.user_list.append(User(user_name))
         return True
     # involved - cleared
-    def _add_event(self, user_name, post_day, post_count, event_post_type):
-        for user in self.data.user_list:
-            if user.name == user_name:
-                for event in self.data.events:
-                    if event.post_day == post_day:
-                        return "Error: Event already Added"
-                self.data.events.append(Event(post_day, post_count, event_post_type))
-                return True
-        return "Error: User Name Not Recognised!"
+    def _add_event(self, user_name, post_day):
+        self.data.post_day = post_day
+        return True
     # clear
     def _add_album(self, user_name, args):
         #TODO: verify no one has added album
@@ -195,15 +186,12 @@ class Bot:
             return "Error: No Users Added!"
 # clear
 class Data:
+
     def __init__(self):
         self.week = 0
         self.user_index = 0
         self.user_list = []
-        self.events = []
-# involved
-class Event:
-    def __init__(self, post_day):
-        self.post_day = post_day
+        self.post_day = ""
 # clear
 class User:
 
