@@ -89,7 +89,6 @@ class Bot:
         if len(self.data.user_list[self.data.user_index].submissions) > 0:
             album = self.data.user_list[self.data.user_index].submissions[0]
             self._post_album_to_reddit(album)
-            album.posted = True # Is this needed?
             found = True
             # moved from _post_analysis
             self.data.week += 1
@@ -106,7 +105,6 @@ class Bot:
             if len(self.data.user_list[self.data.user_index].submissions) > 0:
                 album = self.data.user_list[self.data.user_index].submissions[0]
                 self._post_album_to_reddit(album)
-                album.posted = True
                 found = True
             else:
                 if self.data.user_index == old_index:
@@ -226,7 +224,6 @@ class User:
 # involved - cleared
 class Submission:
     def __init__(self, args):
-        self.posted = False
         self.artist = args[0]
         self.album_title = args[1]
         self.year = args[2]
