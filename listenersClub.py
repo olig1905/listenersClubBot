@@ -11,7 +11,8 @@ USER_AGENT = ""
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
-    # clear
+    submissions = [] #TODO: remove album after it is posted
+    
     ERROR_AUTH = "Error: You do not have the correct permissions for this command!"
     ERROR_INVALID = "Error: Invalid Number of Arguments"
     ERROR_ALBUM_INVALID = "Error: Too Few Arguments to add Album"
@@ -25,15 +26,15 @@ class Bot:
             self.load_data()
         else:
             self.data = Data()
-    # clear
+    
     def save_data(self):
         with open(STATE_DATA, 'wb') as output_file:
             pickle.dump(self.data, output_file, pickle.HIGHEST_PROTOCOL)
-    # clear
+    
     def load_data(self):
         with open(STATE_DATA, 'rb') as input_file:
             self.data = pickle.load(input_file)
-    # clear
+    
     def check_messages(self):
         messages = self.reddit.get_unread(limit=None)
         for msg in reversed(list(messages)):
@@ -41,11 +42,11 @@ class Bot:
             print(response)
             msg.reply(response)
             msg.mark_as_read()
-    # involved - cleared
-    def check_events(self):
+    
+    def check_events(self): #TODO: fix to where it doesn't post every 15 minutes
         if time.strftime("%A") == self.data.post_day:
-            success = self._post_album() # remove album after it is posted
-    # clear
+            self._post_album()
+    
     def _authenticate_user(self, name, level):
         if level == 'Mod':
             mod_list = self.reddit.get_subreddit(SUBREDDIT).get_moderators()
@@ -60,14 +61,14 @@ class Bot:
             return False
         else:
             return False
-    # involved - cleared
+    
     def _post_album_to_reddit(self, album):
         post_body = self._generate_post_body(album)
         print(post_body)
         self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " = " + album.album_title, text=str(post_body), send_replies=False)
-    # involved - cleared
+    
     def _generate_post_body(self, album):
-        post_body = "This Weeks Album Has Been Picked By /u/" + self.data.user_list[self.data.user_index].name
+        #post_body = "This Weeks Album Has Been Picked By /u/" #TODO: get user who submitted album
         post_body += "\n\n## ["+ album.artist +" - "+ album.album_title + "]("+album.link1+")\n\n### Details and Synopsis\n\n"
         post_body += "Release Detail | Value\n---|---:\n**Year** | " +  album.year +"\n**Length** | " + album.length + "\n**Label** | " +  album.label +"\n**Genre** | " + album.genre
         post_body += "\n\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n\n"
@@ -80,40 +81,15 @@ class Bot:
         post_body += "\n\n### Analysis Questions\n\n" + album.analysis_questions
 
         return post_body
-    # involved
+    
     def _post_album(self):
-        if self.data.user_index == len(self.data.user_list):
-            self.data.user_index = 0
-        old_index = self.data.user_index
-        found = False
-        print(len(self.data.user_list[self.data.user_index].submissions))
-        if len(self.data.user_list[self.data.user_index].submissions) > 0:
-            album = self.data.user_list[self.data.user_index].submissions[0]
+        if len(Bot.submissions) > 0:
+            album = Bot.submissions[0]
             self._post_album_to_reddit(album)
-            found = True
-            # moved from _post_analysis
             self.data.week += 1
-            print(str(len(self.data.user_list[self.data.user_index].submissions)))
-            self.data.user_list[self.data.user_index].submissions.pop(0)
-            print(str(len(self.data.user_list[self.data.user_index].submissions)))
-            self.data.user_index += 1
-        else:
-            self.data.user_index += 1
-            if self.data.user_index == len(self.data.user_list):
-                self.data.user_index = 0
-
-        while not found:
-            if len(self.data.user_list[self.data.user_index].submissions) > 0:
-                album = self.data.user_list[self.data.user_index].submissions[0]
-                self._post_album_to_reddit(album)
-                found = True
-            else:
-                if self.data.user_index == old_index:
-                    return False
-                self.data.user_index += 1
-                if self.data.user_index == len(self.data.user_list):
-                    self.data.user_index = 0
-    # involved - cleared
+        else
+            print("No albums submitted.")
+    
     def _parse_command(self, msg):
         cmd = msg.subject
         args = msg.body
@@ -159,18 +135,18 @@ class Bot:
             return "Your Command has been processed."
         else:
             return success
-    # clear
+    
     def _add_user(self, user_name):
         for user in self.data.user_list:
             if user.name == user_name:
                 return "Error: User Already Added!"
         self.data.user_list.append(User(user_name))
         return True
-    # involved - cleared
+    
     def _add_event(self, user_name, post_day):
         self.data.post_day = post_day
         return True
-    # clear
+    
     def _add_album(self, user_name, args):
         #TODO: verify no one has added album
         for user in self.data.user_list:
@@ -178,36 +154,32 @@ class Bot:
             if user.name == user_name:
                 return user.add_submission(args)
         return "Error: User Name Not Recognised!"
-    # clear
+    
     def _get_user_list(self):
         if len(self.data.user_list) != 0:
             return self.data.user_list
         else:
             return "Error: No Users Added!"
-# clear
-class Data:
 
+class Data:
+    
     def __init__(self):
         self.week = 0
         self.user_index = 0
         self.user_list = []
         self.post_day = ""
-# clear
-class User:
 
+class User:
     def __init__(self, name):
         self.name = name
-        self.submissions = []
 
-    def add_submission(self, new_album):
-        if len(self.submissions) > 2:
-            return "Error: You have reached your max submissions. Please wait for your turn to come around before submitting again!"
-        for album in self.submissions:
+    def add_submission(self, new_album): #TODO: only let users have 2 submissions at one time
+        for album in Bot.submissions:
             if album.artist == new_album[0] and album.album_title == new_album[1]:
                 return "Submission already added!"
-        self.submissions.append(Submission(new_album))
+        Bot.submissions.append(Submission(new_album))
         return True
-# involved - cleared
+        
 class Submission:
     def __init__(self, args):
         self.artist = args[0]
