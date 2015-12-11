@@ -12,6 +12,10 @@ OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
     # clear
+    ERROR_AUTH = "Error: You do not have the correct permissions for this command!"
+    ERROR_INVALID = "Error: Invalid Number of Arguments"
+    ERROR_ALBUM_INVALID = "Error: Too Few Arguments to add Album"
+    
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
         self.reddit = praw.Reddit(user_agent)
@@ -124,37 +128,35 @@ class Bot:
                 if self._authenticate_user(msg.author.name, 'Mod'):
                     success = self._add_user(args[0])
                 else:
-                    success = "Error: You do not have the correct permissions for this command!"
+                    success = Bot.ERROR_AUTH
             else:
-                success = "Error: Invalid Number of Arguments"
+                success = Bot.ERROR_INVALID
         elif cmd == "GET-USERS":
             if len(args) == 1 and args[0] == '?':
                 if self._authenticate_user(msg.author.name, 'User'):
                     success = str(self._get_user_list())
                 else:
-                    success = "Error: You do not have the correct permissions for this command!"
-
+                    success = Bot.ERROR_AUTH
             else:
-                success = "Error: Invalid Number of Arguments"
+                success = Bot.ERROR_INVALID
         elif cmd == "ADD-ALBUM":
             if len(args) >= 10:
                 if self._authenticate_user(msg.author.name, 'User'):
                     success = self._add_album(msg.author.name, args)
                 else:
-                    success = "Error: You do not have the correct permissions for this command!"
+                    success = Bot.ERROR_AUTH
             else:
-                success = "Error: Too Few Arguments to add Album"
+                success = Bot.ERROR_ALBUM_INVALID
         elif cmd == "POST-ALBUM":
-            if len(args) == 3:
+            if len(args) == 1:
                 if self._authenticate_user(msg.author.name, 'Mod'):
-                    success = self._add_event(msg.author.name, args[0], int(args[1]), args[2])
+                    success = self._add_event(msg.author.name, args[0])
                 else:
-                    success = "Error: You do not have the correct permissions for this command!"
+                    success = Bot.ERROR_AUTH
             else:
-                success = "Error: Invalid Number of Arguments"
+                success = Bot.ERROR_INVALID
         else:
-            print("BAD CMD: " + cmd)
-            success = "Error: Invalid Command"
+            success = "Error: Invalid Command: " + cmd
 
         if success:
             return "Your Command has been processed."
@@ -200,18 +202,14 @@ class Data:
         self.events = []
 # involved
 class Event:
-    def __init__(self, post_day, post_count, post_type):
+    def __init__(self, post_day):
         self.post_day = post_day
-        self.post_count = post_count
-        self.post_type = post_type #list or username
 # clear
 class User:
-    usrpost_count = 0
 
     def __init__(self, name):
         self.name = name
         self.submissions = []
-        User.usrpost_count += 1
 
     def add_submission(self, new_album):
         if len(self.submissions) > 2:
@@ -248,4 +246,4 @@ while True:
     bot.check_messages()
     bot.check_events()
     bot.save_data()
-    time.sleep(10)
+    time.sleep(900)
