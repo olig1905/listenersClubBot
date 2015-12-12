@@ -4,6 +4,7 @@ Python Script For A Redit Bot to Moderate and Automate a Listeners Club Subreddi
 Requisites:
 * pip install praw
 * pip install praw-OAuth2Util
+* pip install pylast
 
 Config:
 To configure with OAuth, the bot's host will need to use their developer account and create an app. 
