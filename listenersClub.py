@@ -202,6 +202,27 @@ class Submission:
         else:
             self.link3 = "NULL"
 
+class Album:
+    def __init__(self):
+        self.title = ""
+        self.artist = ""
+        self.year_published = ""
+        self.label = ""
+        self.genres = []
+        self.tracklist = []
+
+    def print_album_details(self):
+        print("title: " + self.title)
+        print("artist: " + self.artist)
+        if self.year_published:
+            print("year_published: " + self.year_published)
+        if self.label:
+            print("label: " + self.label)
+        if self.genres:
+            print("genres: " + str(self.genres))
+        if self.tracklist:
+            print("tracklist: " + str(self.tracklist))
+
 class Album_Retriever:
     #string literals
     CONF_USERNAME = "username"
@@ -220,8 +241,8 @@ class Album_Retriever:
     def _parse_config(self):
         pwd = os.path.dirname(os.path.realpath(__file__))
         conf = open(pwd + "/config/lastfm.ini", "r")
-        for line in conf:
-            print("line[0]: " + line[0] + " line[1]: " + line[1] + " line[2]: " + line[2])
+        for lines in conf:
+            line = lines.split()
             if line[1] == Album_Retriever.CONF_TOKEN:
                 if line[0] == Album_Retriever.CONF_USERNAME:
                     self.username = line[2]
@@ -237,14 +258,38 @@ class Album_Retriever:
                 print "Could not connect to last.fm"
         conf.close()
 
-    def get_artist_info(self):
-        return self.network.get_album("Death Grips", "No Love Deep Web")
-        
+    def _parse_tags(self, toptags):
+        tags = pylast.extract_items(toptags)
+        genres = []
+        for tag in tags:
+            genres.append(tag.get_name())
+        return genres
+
+    def _parse_tracks(self, track_array):
+        tracks = []
+        for track in track_array:
+            tracks.append(str(track))
+        return tracks
+
+    def get_album_details(self, artist, title):
+        album = self.network.get_album(artist, title)
+        album_details = Album()
+        album_details.title = title
+        album_details.artist = artist
+        album_details.year_published = album.get_release_date()
+        album_details.label = ""
+        album_details.genres = self._parse_tags(album.get_artist().get_top_tags(limit=5))
+        album_details.tracklist = self._parse_tracks(album.get_tracks())
+        return album_details
+
 
 ##########MAIN###########
-bot = Bot(USER_AGENT, USER_NAME)
-while True:
-    bot.check_messages()
-    bot.check_events()
-    bot.save_data()
-    time.sleep(900)
+#bot = Bot(USER_AGENT, USER_NAME)
+#while True:
+#    bot.check_messages()
+#    bot.check_events()
+#    bot.save_data()
+#    time.sleep(900)
+ar = Album_Retriever()
+album_details = ar.get_album_details("Death Grips", "No Love Deep Web")
+album_details.print_album_details()
