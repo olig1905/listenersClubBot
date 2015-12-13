@@ -1,5 +1,6 @@
 import OAuth2Util
 import praw
+import pylast
 import os
 import time
 import pickle
