@@ -162,17 +162,17 @@ class Bot:
             return "Error: No Users Added!"
 
 class Data:
-    
     def __init__(self):
         self.week = 0
-        self.user_index = 0
         self.user_list = []
         self.post_day = ""
 
 class User:
     def __init__(self, name):
         self.name = name
+        #TODO: add auth level enum 
 
+    #TODO: move to bot class
     def add_submission(self, new_album): #TODO: only let users have 2 submissions at one time
         for album in Bot.submissions:
             if album.artist == new_album[0] and album.album_title == new_album[1]:
