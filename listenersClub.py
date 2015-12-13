@@ -6,9 +6,9 @@ import time
 import pickle
 
 STATE_DATA = "botStateData.pkl"
-SUBREDDIT = ""
+SUBREDDIT = "TeacupsAndTurntables"
 USER_NAME = ""
-USER_AGENT = ""
+USER_AGENT = "AdminUtil"
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
@@ -22,12 +22,16 @@ class Bot:
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
         self.reddit = praw.Reddit(user_agent)
+        print("authenticating")
         self.oauth = OAuth2Util.OAuth2Util(self.reddit, configfile=OAUTH_CONF_FILE)
+        print("authentication complete")
         self.oauth.refresh(force=True)
         if os.path.isfile(STATE_DATA):
             self.load_data()
         else:
             self.data = Data()
+        self._retrieve_moderators()
+        print(self.data.get_user_names_by_auth(User.AUTH_ADMIN))
     
     def save_data(self):
         with open(STATE_DATA, 'wb') as output_file:
@@ -36,6 +40,28 @@ class Bot:
     def load_data(self):
         with open(STATE_DATA, 'rb') as input_file:
             self.data = pickle.load(input_file)
+
+    #TODO: test this
+    def _retrieve_moderators(self):
+        user_list = self.data.get_user_names()
+        state_mod_list = self.data.get_user_names_by_auth(User.AUTH_ADMIN)
+        mod_list = self.reddit.get_subreddit(SUBREDDIT).get_moderators()
+
+        for mod in mod_list:
+            print("Processing mod: " + mod.name)
+            if mod.name not in user_list:
+                self.data.add_user(mod.name, User.AUTH_ADMIN)
+            elif mod.name not in state_modS_list:
+                self.data.elevate_user(mod, User.AUTH_ADMIN)
+
+        #for a user who is not a moderator on the subreddit,
+        #but was a part of the state saved moderator list
+        #we need to remove them from the set of moderators
+        for user in user_list:
+            print("Processing user:" + user.user_name)
+            if user.user_name not in mod_list and user.user_name in state_mod_list:
+                self.data.elevate_user(user.user_name, User.AUTH_DEFAULT)
+
     
     def check_messages(self):
         messages = self.reddit.get_unread(limit=None)
@@ -164,11 +190,26 @@ class Bot:
             return "Error: No Users Added!"
 
 class Data:
-    
     def __init__(self):
         self.week = 0
         self.user_list = []
         self.post_day = ""
+
+    def get_user_names(self):
+        users = []
+        for user in self.user_list:
+            users.append(user.name)
+        return users
+
+    def get_user_names_by_auth(self, auth):
+        users = []
+        for user in self.user_list:
+            if user.auth_level == auth:
+                users.append(user.name)
+        return users
+
+    def add_user(self, name, auth):
+        self.user_list.append(User(name, auth))
 
 class User:
     AUTH_DEFAULT = 0
@@ -272,12 +313,12 @@ class Album_Retriever:
 
 
 ##########MAIN###########
-#bot = Bot(USER_AGENT, USER_NAME)
+bot = Bot(USER_AGENT, USER_NAME)
 #while True:
 #    bot.check_messages()
 #    bot.check_events()
 #    bot.save_data()
 #    time.sleep(900)
-ar = Album_Retriever()
-album_details = ar.get_album_details("Death Grips", "No Love Deep Web")
-album_details.print_album_details()
+#ar = Album_Retriever()
+#album_details = ar.get_album_details("Death Grips", "No Love Deep Web")
+#album_details.print_album_details()
