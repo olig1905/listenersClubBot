@@ -12,7 +12,8 @@ USER_AGENT = ""
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
-    submissions = [] #TODO: remove album after it is posted
+    upcoming_submissions = [] #TODO: remove album after it is posted
+    archived_submissions = []
     
     ERROR_AUTH = "Error: You do not have the correct permissions for this command!"
     ERROR_INVALID = "Error: Invalid Number of Arguments"
@@ -84,8 +85,8 @@ class Bot:
         return post_body
     
     def _post_album(self):
-        if len(Bot.submissions) > 0:
-            album = Bot.submissions[0]
+        if len(Bot.upcoming_submissions) > 0:
+            album = Bot.upcoming_submissions[0]
             self._post_album_to_reddit(album)
             self.data.week += 1
         else:
@@ -176,24 +177,18 @@ class User:
     def __init__(self, name, auth_level):
         self.name = name
         self.auth_level = auth_level #TODO: update _add_user to this
-
-    #TODO: move to bot class
-    def add_submission(self, new_album): #TODO: only let users have 2 submissions at one time
-        for album in Bot.submissions:
-            if album.artist == new_album[0] and album.album_title == new_album[1]:
-                return "Submission already added!"
-        Bot.submissions.append(Submission(new_album))
-        return True
         
 class Submission:
-    def __init__(self, args):
+    def __init__(self, args, user):
         ar = Album_Retriever()
         self.album_details = ar.get_album_details(args[0], args[1])
         ar = None
-        self.description =lastfm args[2]
+        self.description = args[2]
         self.selection_reason = args[3]
-        self.analysis_questions = args[4]
-        self.links = args[5]
+        self.notes = args[4]
+        self.analysis_questions = args[5]
+        self.links = args[6]
+        self.submitter = user
 
 class Album:
     def __init__(self):

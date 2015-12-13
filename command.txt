@@ -28,7 +28,7 @@ Subject: Get-Archive-List [default] – Returns the list of archived albums, rev
 Body: posts=1-100
 
 Subject: Add-Album [default] – Adds an album to the list with the given information
-Body: artist_name=”artist name”, album_title=”album title”, description=”description of the album goes here”, selection_reason=”curator's reason for picking this album goes here”, analysis_questions=”Question 1? Question 2? Question 3?”, links=”link1, link2, link3, link4, link5”
+Body: artist_name=”artist name”, album_title=”album title”, description=”description of the album goes here”, selection_reason=”curator's reason for picking this album goes here”, notes="notes go here", analysis_questions=”Question 1? Question 2? Question 3?”, links=”link1, link2, link3, link4, link5”
 
 Subject: Post-Album [admin] – Configures the album posting preferences
 Body: album_day=”(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)”
