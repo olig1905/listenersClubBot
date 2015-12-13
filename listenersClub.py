@@ -12,17 +12,13 @@ USER_AGENT = ""
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
-    upcoming_submissions = [] #TODO: remove album after it is posted
     archived_submissions = []
-    
     ERROR_AUTH = "Error: You do not have the correct permissions for this command!"
     ERROR_INVALID = "Error: Invalid Number of Arguments"
     ERROR_ALBUM_INVALID = "Error: Too Few Arguments to add Album"
-    
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
         self.reddit = praw.Reddit(user_agent)
-        self.parser = Parser()
         print("authenticating")
         self.oauth = OAuth2Util.OAuth2Util(self.reddit, configfile=OAUTH_CONF_FILE)
         print("authentication complete")
@@ -32,11 +28,12 @@ class Bot:
         else:
             self.data = Data()
         self._retrieve_moderators()
+        print(self.data.get_user_names_by_auth(User.AUTH_ADMIN))
     
     def save_data(self):
         with open(STATE_DATA, 'wb') as output_file:
             pickle.dump(self.data, output_file, pickle.HIGHEST_PROTOCOL)
-    
+
     def load_data(self):
         with open(STATE_DATA, 'rb') as input_file:
             self.data = pickle.load(input_file)
@@ -71,9 +68,13 @@ class Bot:
             msg.reply(response)
             msg.mark_as_read()
 
-    def check_events(self): #TODO: fix to where it doesn't post every 15 minutes
-        if time.strftime("%A") == self.data.post_day:
-            self._post_album()
+    def check_events(self):
+        if not self.data.posted_today:
+	    if time.strftime("%A") == self.data.post_day:
+	        self._post_album()
+	        self.data.posted_today = True
+	elif time.strftime("%A") != event.album_day and self.data.posted_today:
+	    self.data.posted_today=False
     
     def _authenticate_user(self, name, level):
         if level == 'Mod':
@@ -94,9 +95,10 @@ class Bot:
         post_body = self._generate_post_body(album)
         print(post_body)
         self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " = " + album.album_title, text=str(post_body), send_replies=False)
-    
+		self.archived_submissions.append(album)
+
     def _generate_post_body(self, album):
-        #post_body = "This Weeks Album Has Been Picked By /u/" #TODO: get user who submitted album
+        post_body = "This Weeks Album Has Been Picked By /u/" + self.data.user_list[self.data.user_index].name
         post_body += "\n\n## ["+ album.artist +" - "+ album.album_title + "]("+album.link1+")\n\n### Details and Synopsis\n\n"
         post_body += "Release Detail | Value\n---|---:\n**Year** | " +  album.year +"\n**Length** | " + album.length + "\n**Label** | " +  album.label +"\n**Genre** | " + album.genre
         post_body += "\n\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n\n"
@@ -109,14 +111,36 @@ class Bot:
         post_body += "\n\n### Analysis Questions\n\n" + album.analysis_questions
 
         return post_body
-    
+
+    #I KNOW THERE IS DUPLICATED CODE HERE. It is the checing of old_index that was a problem.. if you can work out how to put it all in the while loop whilst retaining functionality, you get a gold star.
     def _post_album(self):
-        if len(Bot.upcoming_submissions) > 0:
-            album = Bot.upcoming_submissions[0]
+        if self.data.user_index == len(self.data.user_list):
+            self.data.user_index = 0
+        old_index = self.data.user_index
+        found = False
+        if len(self.data.user_list[self.data.user_index].submissions) > 0:
+            album = self.data.user_list[self.data.user_index].submissions[0]
             self._post_album_to_reddit(album)
-            self.data.week += 1
+            album.posted = True
+            found = True
         else:
-            print("No albums submitted.")
+            self.data.user_index += 1
+            if self.data.user_index == len(self.data.user_list):
+                self.data.user_index = 0
+
+        while not found:
+            if len(self.data.user_list[self.data.user_index].submissions) > 0:
+                album = self.data.user_list[self.data.user_index].submissions[0]
+                self._post_album_to_reddit(album)
+                album.posted = True
+                found = True
+            else:
+                if self.data.user_index == old_index:
+                    return False
+                self.data.user_index += 1
+                if self.data.user_index == len(self.data.user_list):
+                    self.data.user_index = 0
+
     
     def _parse_command(self, msg):
         cmd = msg.subject
@@ -151,7 +175,8 @@ class Bot:
         elif cmd == "POST-ALBUM":
             if len(args) == 1:
                 if self._authenticate_user(msg.author.name, 'Mod'):
-                    success = self._add_event(msg.author.name, args[0])
+		    self.data.post_day = args[0]                    
+		    success = True
                 else:
                     success = Bot.ERROR_AUTH
             else:
@@ -163,16 +188,12 @@ class Bot:
             return "Your Command has been processed."
         else:
             return success
-    
+
     def _add_user(self, user_name):
         for user in self.data.user_list:
             if user.name == user_name:
                 return "Error: User Already Added!"
         self.data.user_list.append(User(user_name))
-        return True
-    
-    def _add_event(self, user_name, post_day):
-        self.data.post_day = post_day
         return True
     
     def _add_album(self, user_name, args):
@@ -182,7 +203,7 @@ class Bot:
             if user.name == user_name:
                 return user.add_submission(args)
         return "Error: User Name Not Recognised!"
-    
+
     def _get_user_list(self):
         if len(self.data.user_list) != 0:
             return self.data.user_list
@@ -192,8 +213,10 @@ class Bot:
 class Data:
     def __init__(self):
         self.week = 0
+        self.user_index = 0
         self.user_list = []
         self.post_day = ""
+	self.posted_today = ""
 
     def get_user_names(self):
         users = []
@@ -218,7 +241,17 @@ class User:
     def __init__(self, name, auth_level):
         self.name = name
         self.auth_level = auth_level #TODO: update _add_user to this
-        
+		self.submissions = []
+
+    def add_submission(self, new_album):
+        if len(self.submissions) > 10:
+            return "Error: You have reached your max submissions. Please wait for your turn to come around before submitting again!"
+        for album in self.submissions:
+            if album.artist == new_album[0] and album.album_title == new_album[1]:
+                return "Submission already added!"
+        self.submissions.append(Submission(new_album))
+        return True
+
 class Submission:
     def __init__(self, args, user):
         ar = Album_Retriever()
@@ -251,34 +284,6 @@ class Album:
             print("genres: " + str(self.genres))
         if self.tracklist:
             print("tracklist: " + str(self.tracklist))
-
-class Parser():
-    #string literals
-    CMD_GET_USERS = 0
-    CMD_ADD_USER = 1
-    CMD_GET_ALBUM = 2
-    CMD_GET_ALBUM_LIST = 3
-    CMD_GET_ARCHIVE_LIST = 4
-    CMD_ADD_ALBUM = 5
-    CMD_POST_ALBUM = 6
-
-    def parse_args(self, cmd, args):
-        if cmd == Parser.CMD_GET_USERS:
-            return true
-        elif cmd == Parser.CMD_ADD_USER:
-            return true
-        elif cmd == Parser.CMD_GET_ALBUM:
-            return true
-        elif cmd == Parser.CMD_GET_ALBUM_LIST:
-            return true
-        elif cmd == Parser.CMD_GET_ARCHIVE_LIST:
-            return true
-        elif cmd == Parser.CMD_ADD_ALBUM:
-            return true
-        elif cmd == Parser.CMD_POST_ALBUM:
-            return true
-        else:
-            return false
 
 class Album_Retriever:
     #string literals
@@ -342,11 +347,12 @@ class Album_Retriever:
 
 ##########MAIN###########
 bot = Bot(USER_AGENT, USER_NAME)
-#while True:
-#    bot.check_messages()
-#    bot.check_events()
-#    bot.save_data()
-#    time.sleep(900)
+while True:
+    bot.check_messages()
+    bot.check_events()
+    bot.save_data()
+    time.sleep(900)
+##Album Retriever Example
 #ar = Album_Retriever()
 #album_details = ar.get_album_details("Death Grips", "No Love Deep Web")
 #album_details.print_album_details()
