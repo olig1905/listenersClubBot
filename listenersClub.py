@@ -184,26 +184,103 @@ class Submission:
     def __init__(self, args):
         self.artist = args[0]
         self.album_title = args[1]
-        self.year = args[2]
-        self.length = args[3]
-        self.genre = args[4]
-        self.label = args[5]
-        self.description = args[6]
-        self.selection_reason = args[7]
-        self.analysis_questions = args[8]
-        self.link1 = args[9]
-        if len(args) == 11:
-            self.link2 = args[10]
-        else:
-            self.link2 = "NULL"
-        if len(args) == 12:
-            self.link3 = args[11]
-        else:
-            self.link3 = "NULL"
+        self.description = args[2]
+        self.selection_reason = args[3]
+        self.analysis_questions = args[4]
+        self.links = args[5]
+        ar = Album_Retriever()
+        self.album_details = ar.get_album_details(self.artist, self.album_title)
+        ar = None
+
+
+class Album:
+    def __init__(self):
+        self.title = ""
+        self.artist = ""
+        self.year_published = ""
+        self.label = ""
+        self.genres = []
+        self.tracklist = []
+
+    def print_album_details(self):
+        print("title: " + self.title)
+        print("artist: " + self.artist)
+        if self.year_published:
+            print("year_published: " + self.year_published)
+        if self.label:
+            print("label: " + self.label)
+        if self.genres:
+            print("genres: " + str(self.genres))
+        if self.tracklist:
+            print("tracklist: " + str(self.tracklist))
+
+class Album_Retriever:
+    #string literals
+    CONF_USERNAME = "username"
+    CONF_PASSWORD = "password"
+    CONF_API_KEY = "api_key"
+    CONF_API_SECRET = "api_secret"
+    CONF_TOKEN = "="
+    def __init__(self):
+        self.username = ""
+        self.password_hash = ""
+        self.api_key = ""
+        self.api_secret = ""
+        self._parse_config()
+        self.network = pylast.LastFMNetwork(api_key = self.api_key, api_secret = self.api_secret, username = self.username, password_hash = self.password_hash)
+
+    def _parse_config(self):
+        pwd = os.path.dirname(os.path.realpath(__file__))
+        conf = open(pwd + "/config/lastfm.ini", "r")
+        for lines in conf:
+            line = lines.split()
+            if line[1] == Album_Retriever.CONF_TOKEN:
+                if line[0] == Album_Retriever.CONF_USERNAME:
+                    self.username = line[2]
+                elif line[0] == Album_Retriever.CONF_PASSWORD:
+                    self.password_hash = pylast.md5(line[2])
+                elif line[0] == Album_Retriever.CONF_API_KEY:
+                    self.api_key = line[2]
+                elif line[0] == Album_Retriever.CONF_API_SECRET:
+                    self.api_secret = line[2]
+                else:
+                    print "Unrecognized configuration option."
+            else:
+                print "Could not connect to last.fm"
+        conf.close()
+
+    def _parse_tags(self, toptags):
+        tags = pylast.extract_items(toptags)
+        genres = []
+        for tag in tags:
+            genres.append(tag.get_name())
+        return genres
+
+    def _parse_tracks(self, track_array):
+        tracks = []
+        for track in track_array:
+            tracks.append(str(track))
+        return tracks
+
+    def get_album_details(self, artist, title):
+        album = self.network.get_album(artist, title)
+        album_details = Album()
+        album_details.title = title
+        album_details.artist = artist
+        album_details.year_published = album.get_release_date()
+        album_details.label = ""
+        album_details.genres = self._parse_tags(album.get_artist().get_top_tags(limit=5))
+        album_details.tracklist = self._parse_tracks(album.get_tracks())
+        return album_details
+
+
 ##########MAIN###########
-bot = Bot(USER_AGENT, USER_NAME)
-while True:
-    bot.check_messages()
-    bot.check_events()
-    bot.save_data()
-    time.sleep(900)
+#bot = Bot(USER_AGENT, USER_NAME)
+#while True:
+#    bot.check_messages()
+#    bot.check_events()
+#    bot.save_data()
+#    time.sleep(900)
+ar = Album_Retriever()
+album_details = ar.get_album_details("Death Grips", "No Love Deep Web")
+album_details.print_album_details()
