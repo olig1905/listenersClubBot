@@ -89,7 +89,7 @@ class Bot:
             return False
         else:
             return False
-    
+
     def _post_album_to_reddit(self, album):
         post_body = self._generate_post_body(album)
         print(post_body)
