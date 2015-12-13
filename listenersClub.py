@@ -168,9 +168,12 @@ class Data:
         self.post_day = ""
 
 class User:
-    def __init__(self, name):
+    AUTH_DEFAULT = 0
+    AUTH_ADMIN = 1
+
+    def __init__(self, name, auth_level):
         self.name = name
-        #TODO: add auth level enum 
+        self.auth_level = auth_level #TODO: update _add_user to this
 
     #TODO: move to bot class
     def add_submission(self, new_album): #TODO: only let users have 2 submissions at one time
@@ -191,7 +194,6 @@ class Submission:
         ar = Album_Retriever()
         self.album_details = ar.get_album_details(self.artist, self.album_title)
         ar = None
-
 
 class Album:
     def __init__(self):
