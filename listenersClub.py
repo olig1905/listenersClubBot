@@ -6,9 +6,9 @@ import time
 import pickle
 
 STATE_DATA = "botStateData.pkl"
-SUBREDDIT = "TeacupsAndTurntables"
+SUBREDDIT = ""
 USER_NAME = ""
-USER_AGENT = "AdminUtil"
+USER_AGENT = ""
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
@@ -51,7 +51,7 @@ class Bot:
             print("Processing mod: " + mod.name)
             if mod.name not in user_list:
                 self.data.add_user(mod.name, User.AUTH_ADMIN)
-            elif mod.name not in state_modS_list:
+            elif mod.name not in state_mod_list:
                 self.data.elevate_user(mod, User.AUTH_ADMIN)
 
         #for a user who is not a moderator on the subreddit,
@@ -70,7 +70,7 @@ class Bot:
             print(response)
             msg.reply(response)
             msg.mark_as_read()
-    
+
     def check_events(self): #TODO: fix to where it doesn't post every 15 minutes
         if time.strftime("%A") == self.data.post_day:
             self._post_album()
