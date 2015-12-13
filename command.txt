@@ -12,7 +12,6 @@ The bot is handled via reddit messages. The command is sent as the Subject of th
 Subject: Command [access level] - Description
 Body: arg1=”x”,arg2=”y”,arg3=”z”,…,argN=”n”
 
-
 Subject: Get-Users [default] – Returns a message with user list and roles
 Body: N/A
 

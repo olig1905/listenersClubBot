@@ -166,14 +166,18 @@ class Data:
     
     def __init__(self):
         self.week = 0
-        self.user_index = 0
         self.user_list = []
         self.post_day = ""
 
 class User:
-    def __init__(self, name):
-        self.name = name
+    AUTH_DEFAULT = 0
+    AUTH_ADMIN = 1
 
+    def __init__(self, name, auth_level):
+        self.name = name
+        self.auth_level = auth_level #TODO: update _add_user to this
+
+    #TODO: move to bot class
     def add_submission(self, new_album): #TODO: only let users have 2 submissions at one time
         for album in Bot.submissions:
             if album.artist == new_album[0] and album.album_title == new_album[1]:
@@ -186,12 +190,10 @@ class Submission:
         ar = Album_Retriever()
         self.album_details = ar.get_album_details(args[0], args[1])
         ar = None
-        self.description = args[2]
+        self.description =lastfm args[2]
         self.selection_reason = args[3]
         self.analysis_questions = args[4]
         self.links = args[5]
-        
-
 
 class Album:
     def __init__(self):
