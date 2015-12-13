@@ -88,7 +88,7 @@ class Bot:
             album = Bot.submissions[0]
             self._post_album_to_reddit(album)
             self.data.week += 1
-        else
+        else:
             print("No albums submitted.")
     
     def _parse_command(self, msg):
