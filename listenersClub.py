@@ -22,6 +22,7 @@ class Bot:
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
         self.reddit = praw.Reddit(user_agent)
+        self.parser = Parser()
         print("authenticating")
         self.oauth = OAuth2Util.OAuth2Util(self.reddit, configfile=OAUTH_CONF_FILE)
         print("authentication complete")
@@ -31,7 +32,6 @@ class Bot:
         else:
             self.data = Data()
         self._retrieve_moderators()
-        print(self.data.get_user_names_by_auth(User.AUTH_ADMIN))
     
     def save_data(self):
         with open(STATE_DATA, 'wb') as output_file:
@@ -251,6 +251,34 @@ class Album:
             print("genres: " + str(self.genres))
         if self.tracklist:
             print("tracklist: " + str(self.tracklist))
+
+class Parser():
+    #string literals
+    CMD_GET_USERS = 0
+    CMD_ADD_USER = 1
+    CMD_GET_ALBUM = 2
+    CMD_GET_ALBUM_LIST = 3
+    CMD_GET_ARCHIVE_LIST = 4
+    CMD_ADD_ALBUM = 5
+    CMD_POST_ALBUM = 6
+
+    def parse_args(self, cmd, args):
+        if cmd == Parser.CMD_GET_USERS:
+            return true
+        elif cmd == Parser.CMD_ADD_USER:
+            return true
+        elif cmd == Parser.CMD_GET_ALBUM:
+            return true
+        elif cmd == Parser.CMD_GET_ALBUM_LIST:
+            return true
+        elif cmd == Parser.CMD_GET_ARCHIVE_LIST:
+            return true
+        elif cmd == Parser.CMD_ADD_ALBUM:
+            return true
+        elif cmd == Parser.CMD_POST_ALBUM:
+            return true
+        else:
+            return false
 
 class Album_Retriever:
     #string literals
