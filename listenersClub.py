@@ -183,15 +183,14 @@ class User:
         
 class Submission:
     def __init__(self, args):
-        self.artist = args[0]
-        self.album_title = args[1]
+        ar = Album_Retriever()
+        self.album_details = ar.get_album_details(args[0], args[1])
+        ar = None
         self.description = args[2]
         self.selection_reason = args[3]
         self.analysis_questions = args[4]
         self.links = args[5]
-        ar = Album_Retriever()
-        self.album_details = ar.get_album_details(self.artist, self.album_title)
-        ar = None
+        
 
 
 class Album:
