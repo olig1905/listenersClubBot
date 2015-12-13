@@ -185,22 +185,14 @@ class Submission:
     def __init__(self, args):
         self.artist = args[0]
         self.album_title = args[1]
-        self.year = args[2]
-        self.length = args[3]
-        self.genre = args[4]
-        self.label = args[5]
-        self.description = args[6]
-        self.selection_reason = args[7]
-        self.analysis_questions = args[8]
-        self.link1 = args[9]
-        if len(args) == 11:
-            self.link2 = args[10]
-        else:
-            self.link2 = "NULL"
-        if len(args) == 12:
-            self.link3 = args[11]
-        else:
-            self.link3 = "NULL"
+        self.description = args[2]
+        self.selection_reason = args[3]
+        self.analysis_questions = args[4]
+        self.links = args[5]
+        ar = Album_Retriever()
+        self.album_details = ar.get_album_details(self.artist, self.album_title)
+        ar = None
+
 
 class Album:
     def __init__(self):

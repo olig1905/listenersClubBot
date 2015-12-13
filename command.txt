@@ -1,12 +1,35 @@
-REDDIT BOT COMMANDS
+NAME
+	Listeners Club Bot
 
-Usage: Subject: CAPS-COMMAND
+SYNOPSIS
+	python listenersClub.py
 
-Body: Arguments;separated;by;semi;colons 
+DESCRIPTION
+Listeners club bot is a python bot that handles the administrative functions of a Reddit listeners club. The bot will post weekly threads with the week's chosen album, the details of the album, and the curator's talking points.
+
+The bot is handled via reddit messages. The command is sent as the Subject of the message and the arguments are sent as the Body of the message.
+
+Subject: Command [access level] - Description
+Body: arg1=”x”,arg2=”y”,arg3=”z”,…,argN=”n”
 
 
-ADD-USER: username *Mod Only*
-GET-USERS: ?
-ADD-ALBUM: Artist;AlbumTitle;Year;Length;Genre;Label;Description;SelectionReason;AnalysisQuestions;link1;link2;link... *Added users only
-POST-ALBUM: Album day;Analysis Day;freq;type {type=list, freq=0}
+Subject: Get-Users [default] – Returns a message with user list and roles
+Body: N/A
 
+Subject: Add-User [admin] – Adds user(s) with base access
+Body: users=”usr1, usr2, usr3, ..., usrN”
+
+Subject: Get-Album [default] – Returns the upcoming thread details for preview.
+Body: N/A
+
+Subject: Get-Album-List [default] – Returns the list of upcoming albums
+Body: posts=1-25
+
+Subject: Get-Archive-List [default] – Returns the list of archived albums, reviewed in the past
+Body: posts=1-100
+
+Subject: Add-Album [default] – Adds an album to the list with the given information
+Body: artist_name=”artist name”, album_title=”album title”, description=”description of the album goes here”, selection_reason=”curator's reason for picking this album goes here”, analysis_questions=”Question 1? Question 2? Question 3?”, links=”link1, link2, link3, link4, link5”
+
+Subject: Post-Album [admin] – Configures the album posting preferences
+Body: album_day=”(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)”
