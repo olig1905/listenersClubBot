@@ -201,11 +201,11 @@ class Bot:
             if user.name == user_name:
                 for album in Bot.archived_submissions:
                         if album.artist == args[0] and album.album_title == args[1]:
-                            return "Album already added/posted!"
+                            return "Album already posted!"
                 for user in self.data.user_list:
                     for album in user.submissions:
                         if album.artist == args[0] and album.album_title == args[1]:
-                            return "Album already added/posted!"
+                            return "Album already added!"
                 return user.add_submission(args)      
         return "Error: User Name Not Recognised!"
 
@@ -251,9 +251,6 @@ class User:
     def add_submission(self, new_album):
         if len(self.submissions) > 10:
             return "Error: You have reached your max submissions. Please wait for your turn to come around before submitting again!"
-        for album in self.submissions:
-            if album.artist == new_album[0] and album.album_title == new_album[1]:
-                return "Submission already added!" 
         self.submissions.append(Submission(new_album))
         return True
 
