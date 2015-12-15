@@ -165,7 +165,7 @@ class Bot:
             else:
                 success = Bot.ERROR_INVALID
         elif cmd == "ADD-ALBUM":
-            if len(args) >= 10:
+            if len(args) >= 10: # possibly move to AFTER user is authenticated
                 if self._authenticate_user(msg.author.name, 'User'):
                     success = self._add_album(msg.author.name, args)
                 else:
@@ -197,17 +197,14 @@ class Bot:
         return True
     
     def _add_album(self, user_name, args):
-        for user in self.data.user_list:
-            if user.name == user_name:
-                for album in Bot.archived_submissions:
-                        if album.artist == args[0] and album.album_title == args[1]:
-                            return "Album already posted!"
-                for user in self.data.user_list:
-                    for album in user.submissions:
-                        if album.artist == args[0] and album.album_title == args[1]:
-                            return "Album already added!"
-                return user.add_submission(args)      
-        return "Error: User Name Not Recognised!"
+        for album in Bot.archived_submissions:
+                if album.artist == args[0] and album.album_title == args[1]:
+                    return "Album already posted!"
+        for users in self.data.user_list:
+            for album in users.submissions:
+                if album.artist == args[0] and album.album_title == args[1]:
+                    return "Album already added!"
+        return user_name.add_submission(args)      
 
     def _get_user_list(self):
         if len(self.data.user_list) != 0:
