@@ -73,8 +73,8 @@ class Bot:
             if time.strftime("%A") == self.data.post_day:
                 self._post_album()
                 self.data.posted_today = True
-            elif time.strftime("%A") != event.album_day and self.data.posted_today:
-                self.data.posted_today=False
+        elif time.strftime("%A") != event.post_day and self.data.posted_today:
+            self.data.posted_today = False
     
     def _authenticate_user(self, name, level):
         if level == 'Mod':
