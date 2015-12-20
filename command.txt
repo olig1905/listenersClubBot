@@ -22,10 +22,10 @@ Subject: Get-Album [default] – Returns the upcoming thread details for preview
 Body: N/A
 
 Subject: Get-Album-List [default] – Returns the list of upcoming albums
-Body: posts=1-25
+Body: posts="1-25"
 
 Subject: Get-Archive-List [default] – Returns the list of archived albums, reviewed in the past
-Body: posts=1-100
+Body: posts="1-100"
 
 Subject: Add-Album [default] – Adds an album to the list with the given information
 Body: artist_name=”artist name”, album_title=”album title”, description=”description of the album goes here”, selection_reason=”curator's reason for picking this album goes here”, notes="notes go here", analysis_questions=”Question 1? Question 2? Question 3?”, links=”link1, link2, link3, link4, link5”

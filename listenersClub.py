@@ -16,6 +16,13 @@ class Bot:
     ERROR_AUTH = "Error: You do not have the correct permissions for this command!"
     ERROR_INVALID = "Error: Invalid Number of Arguments"
     ERROR_ALBUM_INVALID = "Error: Too Few Arguments to add Album"
+    CMD_ADD_ALBUM = "add-album"
+    CMD_GET_ALBUM = "get-album"
+    CMD_GET_ALBUM_LIST = "get-album-list"
+    CMD_ADD_USER = "add-user"
+    CMD_GET_USERS = "get-users"
+    CMD_GET_ARCHIVE_LIST = "get-archive-list"
+    CMD_POST_ALBUM = "post-album"
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
         self.reddit = praw.Reddit(user_agent)
@@ -55,9 +62,9 @@ class Bot:
         #but was a part of the state saved moderator list
         #we need to remove them from the set of moderators
         for user in user_list:
-            print("Processing user:" + user.user_name)
-            if user.user_name not in mod_list and user.user_name in state_mod_list:
-                self.data.elevate_user(user.user_name, User.AUTH_DEFAULT)
+            print("Processing user:" + user)
+            if user not in mod_list and user in state_mod_list:
+                self.data.elevate_user(user, User.AUTH_DEFAULT)
 
     
     def check_messages(self):
@@ -146,8 +153,9 @@ class Bot:
         cmd = msg.subject
         args = msg.body
         success = True
-        args = args.split(';')
-        if cmd == "ADD-USER":
+        arguments = self.parse_arguments(args)
+        # print(arguments)
+        if cmd.lower() == CMD_ADD_USER:
             if len(args) == 1:
                 print("Add User: " + args[0])
                 if self._authenticate_user(msg.author.name, 'Mod'):
@@ -156,7 +164,7 @@ class Bot:
                     success = Bot.ERROR_AUTH
             else:
                 success = Bot.ERROR_INVALID
-        elif cmd == "GET-USERS":
+        elif cmd.lower() == CMD_GET_USERS:
             if len(args) == 1 and args[0] == '?':
                 if self._authenticate_user(msg.author.name, 'User'):
                     success = str(self._get_user_list())
@@ -164,7 +172,7 @@ class Bot:
                     success = Bot.ERROR_AUTH
             else:
                 success = Bot.ERROR_INVALID
-        elif cmd == "ADD-ALBUM":
+        elif cmd.lower() == CMD_ADD_ALBUM:
             if len(args) >= 10:
                 if self._authenticate_user(msg.author.name, 'User'):
                     success = self._add_album(msg.author.name, args)
@@ -172,7 +180,7 @@ class Bot:
                     success = Bot.ERROR_AUTH
             else:
                 success = Bot.ERROR_ALBUM_INVALID
-        elif cmd == "POST-ALBUM":
+        elif cmd.lower() == CMD_POST_ALBUM:
             if len(args) == 1:
                 if self._authenticate_user(msg.author.name, 'Mod'):
 		    self.data.post_day = args[0]                    
@@ -241,6 +249,11 @@ class Data:
 
     def add_user(self, name, auth):
         self.user_list.append(User(name, auth))
+
+    def elevate_user(self, name, auth):
+        for user in self.user_list:
+            if user.name == user:
+                user.auth = auth
 
 class User:
     AUTH_DEFAULT = 0
