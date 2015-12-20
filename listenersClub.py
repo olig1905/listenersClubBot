@@ -210,6 +210,14 @@ class Bot:
         else:
             return "Error: No Users Added!"
 
+    def parse_arguments(self, args):
+        pattern = r'([a-z0-9]*[[_]?[a-z0-9]*]?)=(["][^"]*["])[,]?\s?'
+        tuple_iter = re.finditer(pattern, args)
+        arg_tuples = {}
+        for result in tuple_iter:
+            arg_tuples[result.group(1)] = result.group(2)
+        return arg_tuples
+
 class Data:
     def __init__(self):
         self.week = 0
