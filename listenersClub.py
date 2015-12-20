@@ -16,13 +16,6 @@ class Bot:
     ERROR_AUTH = "Error: You do not have the correct permissions for this command!"
     ERROR_INVALID = "Error: Invalid Number of Arguments"
     ERROR_ALBUM_INVALID = "Error: Too Few Arguments to add Album"
-    CMD_ADD_ALBUM = "add-album"
-    CMD_GET_ALBUM = "get-album"
-    CMD_GET_ALBUM_LIST = "get-album-list"
-    CMD_ADD_USER = "add-user"
-    CMD_GET_USERS = "get-users"
-    CMD_GET_ARCHIVE_LIST = "get-archive-list"
-    CMD_POST_ALBUM = "post-album"
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
         self.reddit = praw.Reddit(user_agent)
@@ -155,7 +148,7 @@ class Bot:
         success = True
         arguments = self.parse_arguments(args)
         # print(arguments)
-        if cmd.lower() == CMD_ADD_USER:
+        if cmd.lower() == Util.CMD_ADD_USER:
             if len(args) == 1:
                 print("Add User: " + args[0])
                 if self._authenticate_user(msg.author.name, 'Mod'):
@@ -164,23 +157,17 @@ class Bot:
                     success = Bot.ERROR_AUTH
             else:
                 success = Bot.ERROR_INVALID
-        elif cmd.lower() == CMD_GET_USERS:
-            if len(args) == 1 and args[0] == '?':
-                if self._authenticate_user(msg.author.name, 'User'):
-                    success = str(self._get_user_list())
-                else:
-                    success = Bot.ERROR_AUTH
+        elif cmd.lower() == Util.CMD_GET_USERS:
+            if self._authenticate_user(msg.author.name, 'User'):
+                success = str(self._get_user_list())
             else:
-                success = Bot.ERROR_INVALID
-        elif cmd.lower() == CMD_ADD_ALBUM:
-            if len(args) >= 10:
-                if self._authenticate_user(msg.author.name, 'User'):
-                    success = self._add_album(msg.author.name, args)
-                else:
-                    success = Bot.ERROR_AUTH
+                success = Bot.ERROR_AUTH
+        elif cmd.lower() == Util.CMD_ADD_ALBUM:
+            if self._authenticate_user(msg.author.name, 'User'):
+                success = self._add_album(msg.author.name, args)
             else:
-                success = Bot.ERROR_ALBUM_INVALID
-        elif cmd.lower() == CMD_POST_ALBUM:
+                success = Bot.ERROR_AUTH
+        elif cmd.lower() == Util.CMD_POST_ALBUM:
             if len(args) == 1:
                 if self._authenticate_user(msg.author.name, 'Mod'):
 		    self.data.post_day = args[0]                    
@@ -365,6 +352,26 @@ class Album_Retriever:
         album_details.tracklist = self._parse_tracks(album.get_tracks())
         return album_details
 
+class Util:
+    #Commands accepted by the bot
+    CMD_ADD_ALBUM = "add-album"
+    CMD_GET_ALBUM = "get-album"
+    CMD_GET_ALBUM_LIST = "get-album-list"
+    CMD_ADD_USER = "add-user"
+    CMD_GET_USERS = "get-users"
+    CMD_GET_ARCHIVE_LIST = "get-archive-list"
+    CMD_POST_ALBUM = "post-album"
+    #arguments accepted for the above commands
+    ARG_USERS = "users"
+    ARG_POSTS = "posts"
+    ARG_ARTIST_NAME = "artist_name"
+    ARG_ALBUM_TITLE = "album_title"
+    ARG_DESCRIPTION = "description"
+    ARG_SELECTION_REASON = "selection_reason"
+    ARG_NOTES = "notes"
+    ARG_ANALYSIS_QUESTIONS = "analysis_questions"
+    ARG_LINKS = "links"
+    ARG_ALBUM_DAY = "album_day"
 
 ##########MAIN###########
 bot = Bot(USER_AGENT, USER_NAME)
