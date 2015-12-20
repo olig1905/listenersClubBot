@@ -6,9 +6,9 @@ import time
 import pickle
 
 STATE_DATA = "botStateData.pkl"
-SUBREDDIT = "teacupsandturntables"
+SUBREDDIT = ""
 USER_NAME = ""
-USER_AGENT = "test"
+USER_AGENT = ""
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
@@ -50,15 +50,6 @@ class Bot:
                 self.data.add_user(mod.name, User.AUTH_ADMIN)
             elif mod.name not in state_mod_list:
                 self.data.elevate_user(mod, User.AUTH_ADMIN)
-
-        #for a user who is not a moderator on the subreddit,
-        #but was a part of the state saved moderator list
-        #we need to remove them from the set of moderators
-        for user in user_list:
-            print("Processing user:" + user)
-            if user not in mod_list and user in state_mod_list:
-                self.data.elevate_user(user, User.AUTH_DEFAULT)
-
     
     def check_messages(self):
         messages = self.reddit.get_unread(limit=None)
