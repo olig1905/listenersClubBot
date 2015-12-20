@@ -6,9 +6,9 @@ import time
 import pickle
 
 STATE_DATA = "botStateData.pkl"
-SUBREDDIT = ""
+SUBREDDIT = "teacupsandturntables"
 USER_NAME = ""
-USER_AGENT = ""
+USER_AGENT = "test"
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
