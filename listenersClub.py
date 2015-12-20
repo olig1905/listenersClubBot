@@ -95,7 +95,7 @@ class Bot:
         post_body = self._generate_post_body(album)
         print(post_body)
         self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " = " + album.album_title, text=str(post_body), send_replies=False)
-		self.archived_submissions.append(album)
+        self.archived_submissions.append(album)
 
     def _generate_post_body(self, album):
         post_body = "This Weeks Album Has Been Picked By /u/" + self.data.user_list[self.data.user_index].name
@@ -241,7 +241,7 @@ class User:
     def __init__(self, name, auth_level):
         self.name = name
         self.auth_level = auth_level #TODO: update _add_user to this
-		self.submissions = []
+        self.submissions = []
 
     def add_submission(self, new_album):
         if len(self.submissions) > 10:
