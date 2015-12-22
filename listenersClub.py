@@ -70,11 +70,11 @@ class Bot:
 
     def check_events(self):
         if not self.data.posted_today:
-	    if time.strftime("%A") == self.data.post_day:
-	        self._post_album()
-	        self.data.posted_today = True
-	elif time.strftime("%A") != event.album_day and self.data.posted_today:
-	    self.data.posted_today=False
+            if time.strftime("%A") == self.data.post_day:
+                self._post_album()
+                self.data.posted_today = True
+        elif time.strftime("%A") != event.post_day and self.data.posted_today:
+            self.data.posted_today = False
     
     def _authenticate_user(self, name, level):
         if level == 'Mod':
@@ -95,7 +95,7 @@ class Bot:
         post_body = self._generate_post_body(album)
         print(post_body)
         self.reddit.submit(SUBREDDIT, "Week "+ str(self.data.week) + ": " + album.artist + " = " + album.album_title, text=str(post_body), send_replies=False)
-		self.archived_submissions.append(album)
+        self.archived_submissions.append(album)
 
     def _generate_post_body(self, album):
         post_body = "This Weeks Album Has Been Picked By /u/" + self.data.user_list[self.data.user_index].name
@@ -112,7 +112,7 @@ class Bot:
 
         return post_body
 
-    #I KNOW THERE IS DUPLICATED CODE HERE. It is the checing of old_index that was a problem.. if you can work out how to put it all in the while loop whilst retaining functionality, you get a gold star.
+    #I KNOW THERE IS DUPLICATED CODE HERE. It is the checking of old_index that was a problem.. if you can work out how to put it all in the while loop whilst retaining functionality, you get a gold star.
     def _post_album(self):
         if self.data.user_index == len(self.data.user_list):
             self.data.user_index = 0
@@ -159,13 +159,13 @@ class Bot:
         elif cmd == "GET-USERS":
             if len(args) == 1 and args[0] == '?':
                 if self._authenticate_user(msg.author.name, 'User'):
-                    success = str(self._get_user_list())
+                    success = str(self._get_user_list()) #fix: doesn't send the caller a message containing a list of users
                 else:
                     success = Bot.ERROR_AUTH
             else:
                 success = Bot.ERROR_INVALID
         elif cmd == "ADD-ALBUM":
-            if len(args) >= 10:
+            if len(args) >= 10: # possibly move to AFTER user is authenticated
                 if self._authenticate_user(msg.author.name, 'User'):
                     success = self._add_album(msg.author.name, args)
                 else:
@@ -197,12 +197,14 @@ class Bot:
         return True
     
     def _add_album(self, user_name, args):
-        #TODO: verify no one has added album
-        for user in self.data.user_list:
-            print(user.name + user_name)
-            if user.name == user_name:
-                return user.add_submission(args)
-        return "Error: User Name Not Recognised!"
+        def add_album(self, user_name, args):
+            archived = self._is_archived_submission(args)
+            submitted = self._is_album_submitted(args)
+            if not archived and not submitted:
+                self.submissions.add(user_name, args)
+                return True #possibly update
+            else:
+                return "Album not valid" #update to let user know why it's not valid    
 
     def _get_user_list(self):
         if len(self.data.user_list) != 0:
@@ -216,7 +218,7 @@ class Data:
         self.user_index = 0
         self.user_list = []
         self.post_day = ""
-	self.posted_today = ""
+        self.posted_today = ""
 
     def get_user_names(self):
         users = []
@@ -241,14 +243,12 @@ class User:
     def __init__(self, name, auth_level):
         self.name = name
         self.auth_level = auth_level #TODO: update _add_user to this
-		self.submissions = []
+        #TODO: remove this and add_submission
+        self.submissions = []
 
     def add_submission(self, new_album):
         if len(self.submissions) > 10:
             return "Error: You have reached your max submissions. Please wait for your turn to come around before submitting again!"
-        for album in self.submissions:
-            if album.artist == new_album[0] and album.album_title == new_album[1]:
-                return "Submission already added!"
         self.submissions.append(Submission(new_album))
         return True
 
@@ -315,9 +315,9 @@ class Album_Retriever:
                 elif line[0] == Album_Retriever.CONF_API_SECRET:
                     self.api_secret = line[2]
                 else:
-                    print "Unrecognized configuration option."
+                    print("Unrecognized configuration option.")
             else:
-                print "Could not connect to last.fm"
+                print("Could not connect to last.fm")
         conf.close()
 
     def _parse_tags(self, toptags):
@@ -352,7 +352,7 @@ while True:
     bot.check_events()
     bot.save_data()
     time.sleep(900)
-##Album Retriever Example
-#ar = Album_Retriever()
-#album_details = ar.get_album_details("Death Grips", "No Love Deep Web")
-#album_details.print_album_details()
+#Album Retriever Example
+# ar = Album_Retriever()
+# album_details = ar.get_album_details("Death Grips", "No Love Deep Web")
+# album_details.print_album_details()
