@@ -159,7 +159,7 @@ class Bot:
         elif cmd == "GET-USERS":
             if len(args) == 1 and args[0] == '?':
                 if self._authenticate_user(msg.author.name, 'User'):
-                    success = str(self._get_user_list())
+                    success = str(self._get_user_list()) #fix: doesn't send the caller a message containing a list of users
                 else:
                     success = Bot.ERROR_AUTH
             else:
@@ -197,14 +197,14 @@ class Bot:
         return True
     
     def _add_album(self, user_name, args):
-        for album in Bot.archived_submissions:
-                if album.artist == args[0] and album.album_title == args[1]:
-                    return "Album already posted!"
-        for users in self.data.user_list:
-            for album in users.submissions:
-                if album.artist == args[0] and album.album_title == args[1]:
-                    return "Album already added!"
-        return user_name.add_submission(args)      
+        def add_album(self, user_name, args):
+            archived = self._is_archived_submission(args)
+            submitted = self._is_album_submitted(args)
+            if not archived and not submitted:
+                self.submissions.add(user_name, args)
+                return True #possibly update
+            else:
+                return "Album not valid" #update to let user know why it's not valid    
 
     def _get_user_list(self):
         if len(self.data.user_list) != 0:
@@ -243,6 +243,7 @@ class User:
     def __init__(self, name, auth_level):
         self.name = name
         self.auth_level = auth_level #TODO: update _add_user to this
+        #TODO: remove this and add_submission
         self.submissions = []
 
     def add_submission(self, new_album):
