@@ -2,6 +2,7 @@ import OAuth2Util
 import praw
 import pylast
 import os
+import re
 import time
 import pickle
 
@@ -170,10 +171,7 @@ class Bot:
         else:
             success = "Error: Invalid Command: " + cmd
 
-        if success:
-            return "Your Command has been processed."
-        else:
-            return success
+        return success
 
     def _add_user(self, user_name):
         for user in self.data.user_list:
@@ -192,7 +190,7 @@ class Bot:
 
     def _get_user_list(self):
         if len(self.data.user_list) != 0:
-            return self.data.user_list
+            return self.data.get_user_names_string()
         else:
             return "Error: No Users Added!"
 
@@ -205,6 +203,7 @@ class Bot:
         return arg_tuples
 
 class Data:
+    ERROR_USERS_INVALID_LENGTH = "Something went wrong."
     def __init__(self):
         self.week = 0
         self.user_index = 0
@@ -217,6 +216,20 @@ class Data:
         for user in self.user_list:
             users.append(user.name)
         return users
+
+    def get_user_names_string(self):
+        users = self.get_user_names()
+        if len(users) == 0:
+            return "No users found"
+        elif len(users) == 1:
+            return users[0]
+        elif len(users) > 1:
+            users_string = users[0]
+            for user in users[1:]:
+                users_string += ", " + user
+            return users_string
+        else:
+            return ERROR_USERS_INVALID_LENGTH
 
     def get_user_names_by_auth(self, auth):
         users = []
