@@ -189,7 +189,7 @@ class Bot:
         if len(self.data.user_list) != 0:
             return self.data.get_user_names_string()
         else:
-            return ERROR_BOT_NO_USERS_ADDED
+            return Util.ERROR_BOT_NO_USERS_ADDED
 
     def parse_arguments(self, args):
         pattern = r'([a-z0-9]*[[_]?[a-z0-9]*]?)=(["][^"]*["])[,]?\s?'
