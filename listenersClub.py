@@ -14,9 +14,6 @@ OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
     archived_submissions = []
-    ERROR_AUTH = "Error: You do not have the correct permissions for this command!"
-    ERROR_INVALID = "Error: Invalid Number of Arguments"
-    ERROR_ALBUM_INVALID = "Error: Too Few Arguments to add Album"
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
         self.reddit = praw.Reddit(user_agent)
@@ -146,55 +143,53 @@ class Bot:
                 if self._authenticate_user(msg.author.name, 'Mod'):
                     success = self._add_user(args[0])
                 else:
-                    success = Bot.ERROR_AUTH
+                    success = Util.ERROR_BOT_AUTH
             else:
-                success = Bot.ERROR_INVALID
+                success = Util.ERROR_BOT_INVALID
         elif cmd.lower() == Util.CMD_GET_USERS:
             if self._authenticate_user(msg.author.name, 'User'):
                 success = str(self._get_user_list())
             else:
-                success = Bot.ERROR_AUTH
+                success = Util.ERROR_BOT_AUTH
         elif cmd.lower() == Util.CMD_ADD_ALBUM:
             if self._authenticate_user(msg.author.name, 'User'):
                 success = self._add_album(msg.author.name, args)
             else:
-                success = Bot.ERROR_AUTH
+                success = Util.ERROR_BOT_AUTH
         elif cmd.lower() == Util.CMD_POST_ALBUM:
             if len(args) == 1:
                 if self._authenticate_user(msg.author.name, 'Mod'):
 		    self.data.post_day = args[0]                    
 		    success = True
                 else:
-                    success = Bot.ERROR_AUTH
+                    success = Util.ERROR_BOT_AUTH
             else:
-                success = Bot.ERROR_INVALID
+                success = Util.ERROR_BOT_INVALID
         else:
-            success = "Error: Invalid Command: " + cmd
+            success = Util.ERROR_BOT_INVALID_COMMAND + cmd
 
         return success
 
     def _add_user(self, user_name):
         for user in self.data.user_list:
             if user.name == user_name:
-                return "Error: User Already Added!"
+                return Util.ERROR_BOT_USER_ALREADY_ADDED
         self.data.user_list.append(User(user_name))
         return True
     
     def _add_album(self, user_name, args):
-        def add_album(self, user_name, args):
-            archived = self._is_archived_submission(args)
-            submitted = self._is_album_submitted(args)
-            if not archived and not submitted:
-                self.submissions.add(user_name, args)
-                return True #possibly update
-            else:
-                return "Album not valid" #update to let user know why it's not valid    
+        #TODO: verify no one has added album
+        for user in self.data.user_list:
+            print(user.name + user_name)
+            if user.name == user_name:
+                return user.add_submission(args)
+        return Util.ERROR_BOT_USER_NAME_NOT_REC
 
     def _get_user_list(self):
         if len(self.data.user_list) != 0:
             return self.data.get_user_names_string()
         else:
-            return "Error: No Users Added!"
+            return Util.ERROR_BOT_NO_USERS_ADDED
 
     def parse_arguments(self, args):
         pattern = r'([a-z0-9]*[[_]?[a-z0-9]*]?)=(["][^"]*["])[,]?\s?'
@@ -205,7 +200,6 @@ class Bot:
         return arg_tuples
 
 class Data:
-    ERROR_USERS_INVALID_LENGTH = "Something went wrong."
     def __init__(self):
         self.week = 0
         self.user_index = 0
@@ -231,7 +225,7 @@ class Data:
                 users_string += ", " + user
             return users_string
         else:
-            return ERROR_USERS_INVALID_LENGTH
+            return Util.ERROR_DATA_USERS_INVALID_LENGTH
 
     def get_user_names_by_auth(self, auth):
         users = []
@@ -326,9 +320,9 @@ class Album_Retriever:
                 elif line[0] == Album_Retriever.CONF_API_SECRET:
                     self.api_secret = line[2]
                 else:
-                    print("Unrecognized configuration option.")
+                    print Util.ERROR_ALRE_UNRECOGNIZED_CONFIG
             else:
-                print("Could not connect to last.fm")
+                print Util.ERROR_ALRE_LASTFM_CONNECT
         conf.close()
 
     def _parse_tags(self, toptags):
@@ -375,6 +369,21 @@ class Util:
     ARG_ANALYSIS_QUESTIONS = "analysis_questions"
     ARG_LINKS = "links"
     ARG_ALBUM_DAY = "album_day"
+    #Errors
+    # naming schema: ERROR-KEYWORD_CLASS-NAME_DESCRIPTION
+    #  data
+    ERROR_DATA_USERS_INVALID_LENGTH = "Something went wrong."
+    #  bot
+    ERROR_BOT_AUTH = "Error: You do not have the correct permissions for this command!"
+    ERROR_BOT_INVALID = "Error: Invalid Number of Arguments"
+    ERROR_BOT_ALBUM_INVALID = "Error: Too Few Arguments to add Album"
+    ERROR_BOT_INVALID_COMMAND = "Error: Invalid Command: "
+    ERROR_BOT_USER_ALREADY_ADDED = "Error: User Already Added!"
+    ERROR_BOT_USER_NAME_NOT_REC = "Error: User Name Not Recognised!"
+    ERROR_BOT_NO_USERS_ADDED = "Error: No Users Added!"
+    #  album_retriever
+    ERROR_ALRE_UNRECOGNIZED_CONFIG = "Unrecognized configuration option."
+    ERROR_ALRE_LASTFM_CONNECT = "Could not connect to last.fm"
 
 ##########MAIN###########
 bot = Bot(USER_AGENT, USER_NAME)
