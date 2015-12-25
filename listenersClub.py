@@ -5,6 +5,7 @@ import os
 import re
 import time
 import pickle
+from pymongo import MongoClient
 
 STATE_DATA = "botStateData.pkl"
 SUBREDDIT = ""
@@ -13,6 +14,8 @@ USER_AGENT = ""
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
 class Bot:
+    client = MongoClient()
+    database = self.client[Util.DATABASE_NAME]
     archived_submissions = []
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
@@ -350,6 +353,8 @@ class Album_Retriever:
         return album_details
 
 class Util:
+    #General
+    DATABASE_NAME = "listenersClub"
     #Commands accepted by the bot
     CMD_ADD_ALBUM = "add-album"
     CMD_GET_ALBUM = "get-album"
