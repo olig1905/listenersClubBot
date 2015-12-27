@@ -4,19 +4,98 @@ import pylast
 import os
 import re
 import time
+import json
 import pickle
+import pymongo
 from pymongo import MongoClient
 
 STATE_DATA = "botStateData.pkl"
-SUBREDDIT = ""
+SUBREDDIT = "teacupsandturntables"
 USER_NAME = ""
-USER_AGENT = ""
+USER_AGENT = "test"
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
-class Bot:
+class DatabaseWrapper:
     client = MongoClient()
-    database = self.client[Util.DATABASE_NAME]
+    database = client.listenersClub
+    def __init__(self):
+        print("initiated DatabaseWrapper")
+
+    def get_archived_submissions(self):
+        archived_collection = self.database[Util.ARCHIVE_COLLECTION]
+        return archived_collection.find()
+
+    def insert_archived_submission(self, submission):
+        archived_collection = self.database[Util.ARCHIVE_COLLECTION]
+        archived_collection.insert_one(submission)
+
+    def get_upcoming_submissions(self):
+        upcomining_submissions = self.database[Util.SUBMISSONS_COLLECTION]
+        return upcomining_submissions.find()
+
+    def insert_upcoming_submission(self, submission):
+        upcomining_submissions = self.database[Util.SUBMISSONS_COLLECTION]
+        upcoming_submissions.insert_one(submission)
+
+    def get_latest_bot_data(self):
+        bot_data = self.database[Util.BOT_DATA_COLLECTION]
+        return bot_data.find_one()
+
+    def write_bot_data(self, data):
+        #pop old data
+        bot_data = self.database.bot_data_collection
+        old_state_data = bot_data.find_one()
+        #save the new data
+        print(data.get_dict())
+        bot_data.insert_one(data.get_dict())
+        #remove state data from list
+        bot_data.delete_one(old_state_data)
+
+class Util:
+    #General
+    DATABASE_NAME = "listenersClub"
+    ARCHIVE_COLLECTION = "archived_submissions"
+    SUBMISSONS_COLLECTION = "submission_queue"
+    BOT_DATA_COLLECTION = "bot_data_collection"
+    #Commands accepted by the bot
+    CMD_ADD_ALBUM = "add-album"
+    CMD_GET_ALBUM = "get-album"
+    CMD_GET_ALBUM_LIST = "get-album-list"
+    CMD_ADD_USER = "add-user"
+    CMD_GET_USERS = "get-users"
+    CMD_GET_ARCHIVE_LIST = "get-archive-list"
+    CMD_POST_ALBUM = "post-album"
+    #arguments accepted for the above commands
+    ARG_USERS = "users"
+    ARG_POSTS = "posts"
+    ARG_ARTIST_NAME = "artist_name"
+    ARG_ALBUM_TITLE = "album_title"
+    ARG_DESCRIPTION = "description"
+    ARG_SELECTION_REASON = "selection_reason"
+    ARG_NOTES = "notes"
+    ARG_ANALYSIS_QUESTIONS = "analysis_questions"
+    ARG_LINKS = "links"
+    ARG_ALBUM_DAY = "album_day"
+    #Errors
+    # naming schema: ERROR-KEYWORD_CLASS-NAME_DESCRIPTION
+    #  data
+    ERROR_DATA_USERS_INVALID_LENGTH = "Something went wrong."
+    #  bot
+    ERROR_BOT_AUTH = "Error: You do not have the correct permissions for this command!"
+    ERROR_BOT_INVALID = "Error: Invalid Number of Arguments"
+    ERROR_BOT_ALBUM_INVALID = "Error: Too Few Arguments to add Album"
+    ERROR_BOT_INVALID_COMMAND = "Error: Invalid Command: "
+    ERROR_BOT_USER_ALREADY_ADDED = "Error: User Already Added!"
+    ERROR_BOT_USER_NAME_NOT_REC = "Error: User Name Not Recognised!"
+    ERROR_BOT_NO_USERS_ADDED = "Error: No Users Added!"
+    #  album_retriever
+    ERROR_ALRE_UNRECOGNIZED_CONFIG = "Unrecognized configuration option."
+    ERROR_ALRE_LASTFM_CONNECT = "Could not connect to last.fm"
+
+class Bot:
+    database = DatabaseWrapper()
     archived_submissions = []
+
     def __init__(self, user_agent, user_name):
         self.user_name = user_name
         self.reddit = praw.Reddit(user_agent)
@@ -30,12 +109,14 @@ class Bot:
             self.data = Data()
         self._retrieve_moderators()
         print(self.data.get_user_names_by_auth(User.AUTH_ADMIN))
+        self.database.write_bot_data(self.data)
     
     def save_data(self):
         with open(STATE_DATA, 'wb') as output_file:
             pickle.dump(self.data, output_file, pickle.HIGHEST_PROTOCOL)
 
     def load_data(self):
+        # reload data from database using database wrapper
         with open(STATE_DATA, 'rb') as input_file:
             self.data = pickle.load(input_file)
 
@@ -202,6 +283,7 @@ class Bot:
             arg_tuples[result.group(1)] = result.group(2)
         return arg_tuples
 
+
 class Data:
     def __init__(self):
         self.week = 0
@@ -244,6 +326,15 @@ class Data:
         for user in self.user_list:
             if user.name == user:
                 user.auth = auth
+
+    def get_dict(self):
+        data_dictionary = {}
+        data_dictionary["week"] = self.week
+        data_dictionary["user_index"] = self.user_index
+        data_dictionary["user_list"] = self.get_user_names_string()
+        data_dictionary["post_day"] = self.post_day
+        data_dictionary["posted_today"] = self.posted_today
+        return data_dictionary
 
 class User:
     AUTH_DEFAULT = 0
@@ -351,44 +442,6 @@ class Album_Retriever:
         album_details.genres = self._parse_tags(album.get_artist().get_top_tags(limit=5))
         album_details.tracklist = self._parse_tracks(album.get_tracks())
         return album_details
-
-class Util:
-    #General
-    DATABASE_NAME = "listenersClub"
-    #Commands accepted by the bot
-    CMD_ADD_ALBUM = "add-album"
-    CMD_GET_ALBUM = "get-album"
-    CMD_GET_ALBUM_LIST = "get-album-list"
-    CMD_ADD_USER = "add-user"
-    CMD_GET_USERS = "get-users"
-    CMD_GET_ARCHIVE_LIST = "get-archive-list"
-    CMD_POST_ALBUM = "post-album"
-    #arguments accepted for the above commands
-    ARG_USERS = "users"
-    ARG_POSTS = "posts"
-    ARG_ARTIST_NAME = "artist_name"
-    ARG_ALBUM_TITLE = "album_title"
-    ARG_DESCRIPTION = "description"
-    ARG_SELECTION_REASON = "selection_reason"
-    ARG_NOTES = "notes"
-    ARG_ANALYSIS_QUESTIONS = "analysis_questions"
-    ARG_LINKS = "links"
-    ARG_ALBUM_DAY = "album_day"
-    #Errors
-    # naming schema: ERROR-KEYWORD_CLASS-NAME_DESCRIPTION
-    #  data
-    ERROR_DATA_USERS_INVALID_LENGTH = "Something went wrong."
-    #  bot
-    ERROR_BOT_AUTH = "Error: You do not have the correct permissions for this command!"
-    ERROR_BOT_INVALID = "Error: Invalid Number of Arguments"
-    ERROR_BOT_ALBUM_INVALID = "Error: Too Few Arguments to add Album"
-    ERROR_BOT_INVALID_COMMAND = "Error: Invalid Command: "
-    ERROR_BOT_USER_ALREADY_ADDED = "Error: User Already Added!"
-    ERROR_BOT_USER_NAME_NOT_REC = "Error: User Name Not Recognised!"
-    ERROR_BOT_NO_USERS_ADDED = "Error: No Users Added!"
-    #  album_retriever
-    ERROR_ALRE_UNRECOGNIZED_CONFIG = "Unrecognized configuration option."
-    ERROR_ALRE_LASTFM_CONNECT = "Could not connect to last.fm"
 
 ##########MAIN###########
 bot = Bot(USER_AGENT, USER_NAME)

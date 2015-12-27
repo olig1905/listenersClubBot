@@ -5,6 +5,7 @@ Requisites:
 * pip install praw
 * pip install praw-OAuth2Util
 * pip install pylast
+* pip install pymongo
 
 Config:
 To configure with OAuth, the bot's host will need to use their developer account and create an app. 
