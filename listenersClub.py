@@ -2,6 +2,7 @@ import OAuth2Util
 import praw
 import pylast
 import os
+import re
 import time
 import pickle
 
@@ -50,15 +51,6 @@ class Bot:
                 self.data.add_user(mod.name, User.AUTH_ADMIN)
             elif mod.name not in state_mod_list:
                 self.data.elevate_user(mod, User.AUTH_ADMIN)
-
-        #for a user who is not a moderator on the subreddit,
-        #but was a part of the state saved moderator list
-        #we need to remove them from the set of moderators
-        for user in user_list:
-            print("Processing user:" + user.user_name)
-            if user.user_name not in mod_list and user.user_name in state_mod_list:
-                self.data.elevate_user(user.user_name, User.AUTH_DEFAULT)
-
     
     def check_messages(self):
         messages = self.reddit.get_unread(limit=None)
@@ -146,8 +138,9 @@ class Bot:
         cmd = msg.subject
         args = msg.body
         success = True
-        args = args.split(';')
-        if cmd == "ADD-USER":
+        arguments = self.parse_arguments(args)
+        # print(arguments)
+        if cmd.lower() == Util.CMD_ADD_USER:
             if len(args) == 1:
                 print("Add User: " + args[0])
                 if self._authenticate_user(msg.author.name, 'Mod'):
@@ -156,23 +149,17 @@ class Bot:
                     success = Bot.ERROR_AUTH
             else:
                 success = Bot.ERROR_INVALID
-        elif cmd == "GET-USERS":
-            if len(args) == 1 and args[0] == '?':
-                if self._authenticate_user(msg.author.name, 'User'):
-                    success = str(self._get_user_list()) #fix: doesn't send the caller a message containing a list of users
-                else:
-                    success = Bot.ERROR_AUTH
+        elif cmd.lower() == Util.CMD_GET_USERS:
+            if self._authenticate_user(msg.author.name, 'User'):
+                success = str(self._get_user_list())
             else:
-                success = Bot.ERROR_INVALID
-        elif cmd == "ADD-ALBUM":
-            if len(args) >= 10: # possibly move to AFTER user is authenticated
-                if self._authenticate_user(msg.author.name, 'User'):
-                    success = self._add_album(msg.author.name, args)
-                else:
-                    success = Bot.ERROR_AUTH
+                success = Bot.ERROR_AUTH
+        elif cmd.lower() == Util.CMD_ADD_ALBUM:
+            if self._authenticate_user(msg.author.name, 'User'):
+                success = self._add_album(msg.author.name, args)
             else:
-                success = Bot.ERROR_ALBUM_INVALID
-        elif cmd == "POST-ALBUM":
+                success = Bot.ERROR_AUTH
+        elif cmd.lower() == Util.CMD_POST_ALBUM:
             if len(args) == 1:
                 if self._authenticate_user(msg.author.name, 'Mod'):
 		    self.data.post_day = args[0]                    
@@ -184,10 +171,7 @@ class Bot:
         else:
             success = "Error: Invalid Command: " + cmd
 
-        if success:
-            return "Your Command has been processed."
-        else:
-            return success
+        return success
 
     def _add_user(self, user_name):
         for user in self.data.user_list:
@@ -208,11 +192,20 @@ class Bot:
 
     def _get_user_list(self):
         if len(self.data.user_list) != 0:
-            return self.data.user_list
+            return self.data.get_user_names_string()
         else:
             return "Error: No Users Added!"
 
+    def parse_arguments(self, args):
+        pattern = r'([a-z0-9]*[[_]?[a-z0-9]*]?)=(["][^"]*["])[,]?\s?'
+        tuple_iter = re.finditer(pattern, args)
+        arg_tuples = {}
+        for result in tuple_iter:
+            arg_tuples[result.group(1)] = result.group(2)
+        return arg_tuples
+
 class Data:
+    ERROR_USERS_INVALID_LENGTH = "Something went wrong."
     def __init__(self):
         self.week = 0
         self.user_index = 0
@@ -226,6 +219,20 @@ class Data:
             users.append(user.name)
         return users
 
+    def get_user_names_string(self):
+        users = self.get_user_names()
+        if len(users) == 0:
+            return "No users found"
+        elif len(users) == 1:
+            return users[0]
+        elif len(users) > 1:
+            users_string = users[0]
+            for user in users[1:]:
+                users_string += ", " + user
+            return users_string
+        else:
+            return ERROR_USERS_INVALID_LENGTH
+
     def get_user_names_by_auth(self, auth):
         users = []
         for user in self.user_list:
@@ -236,6 +243,11 @@ class Data:
     def add_user(self, name, auth):
         self.user_list.append(User(name, auth))
 
+    def elevate_user(self, name, auth):
+        for user in self.user_list:
+            if user.name == user:
+                user.auth = auth
+
 class User:
     AUTH_DEFAULT = 0
     AUTH_ADMIN = 1
@@ -243,7 +255,6 @@ class User:
     def __init__(self, name, auth_level):
         self.name = name
         self.auth_level = auth_level #TODO: update _add_user to this
-        #TODO: remove this and add_submission
         self.submissions = []
 
     def add_submission(self, new_album):
@@ -344,6 +355,26 @@ class Album_Retriever:
         album_details.tracklist = self._parse_tracks(album.get_tracks())
         return album_details
 
+class Util:
+    #Commands accepted by the bot
+    CMD_ADD_ALBUM = "add-album"
+    CMD_GET_ALBUM = "get-album"
+    CMD_GET_ALBUM_LIST = "get-album-list"
+    CMD_ADD_USER = "add-user"
+    CMD_GET_USERS = "get-users"
+    CMD_GET_ARCHIVE_LIST = "get-archive-list"
+    CMD_POST_ALBUM = "post-album"
+    #arguments accepted for the above commands
+    ARG_USERS = "users"
+    ARG_POSTS = "posts"
+    ARG_ARTIST_NAME = "artist_name"
+    ARG_ALBUM_TITLE = "album_title"
+    ARG_DESCRIPTION = "description"
+    ARG_SELECTION_REASON = "selection_reason"
+    ARG_NOTES = "notes"
+    ARG_ANALYSIS_QUESTIONS = "analysis_questions"
+    ARG_LINKS = "links"
+    ARG_ALBUM_DAY = "album_day"
 
 ##########MAIN###########
 bot = Bot(USER_AGENT, USER_NAME)
