@@ -11,7 +11,6 @@ from pymongo import MongoClient
 
 STATE_DATA = "botStateData.pkl"
 SUBREDDIT = "teacupsandturntables"
-USER_NAME = ""
 USER_AGENT = "test"
 OAUTH_CONF_FILE = "./config/oauth.ini"
 
@@ -21,17 +20,36 @@ class DatabaseWrapper:
     def __init__(self):
         print("initiated DatabaseWrapper")
 
-    def get_archived_submissions(self):
+    def get_users(self):
+        user_collection = self.database[Util.USER_COLLECTION]
+        new_users = []
+        for user in user_collection.find():
+            new_users.append(user)
+        return new_users
+
+    def insert_user(self, user):
+        user_collection = self.database[Util.USER_COLLECTION]
+        user_collection.insert_one(user.get_dict())
+
+    def write_users(self, users):
+        user_collection = self.database[Util.USER_COLLECTION]
+        for user in users:
+            cur_user_name = user.name
+            user_exists = user_collection.find_one({"name":"cur_user_name"})
+            if not user_exists:
+                user_collection.insert_one(user.get_dict())            
+
+    def get_archived_submissions(self, n=10):
         archived_collection = self.database[Util.ARCHIVE_COLLECTION]
-        return archived_collection.find()
+        return archived_collection.find(limit=n)
 
     def insert_archived_submission(self, submission):
         archived_collection = self.database[Util.ARCHIVE_COLLECTION]
         archived_collection.insert_one(submission)
 
-    def get_upcoming_submissions(self):
+    def get_upcoming_submissions(self, n=10):
         upcoming_submissions = self.database[Util.SUBMISSONS_COLLECTION]
-        return upcomining_submissions.find()
+        return upcoming_submissions.find(limit=n)
 
     def insert_upcoming_submission(self, submission):
         upcoming_submissions = self.database[Util.SUBMISSONS_COLLECTION]
@@ -46,10 +64,11 @@ class DatabaseWrapper:
         bot_data = self.database.bot_data_collection
         old_state_data = bot_data.find_one()
         #save the new data
-        print(data.get_dict())
         bot_data.insert_one(data.get_dict())
+        self.write_users(data.user_list)
         #remove state data from list
-        bot_data.delete_one(old_state_data)
+        if(old_state_data):
+            bot_data.delete_one(old_state_data)
 
 class Util:
     #General
@@ -57,6 +76,7 @@ class Util:
     ARCHIVE_COLLECTION = "archived_submissions"
     SUBMISSONS_COLLECTION = "submission_queue"
     BOT_DATA_COLLECTION = "bot_data_collection"
+    USER_COLLECTION = "user_collection"
     #Commands accepted by the bot
     CMD_ADD_ALBUM = "add-album"
     CMD_GET_ALBUM = "get-album"
@@ -96,38 +116,62 @@ class Bot:
     database = DatabaseWrapper()
     archived_submissions = []
 
-    def __init__(self, user_agent, user_name):
-        self.user_name = user_name
+    def __init__(self, user_agent):
         self.reddit = praw.Reddit(user_agent)
-        print("authenticating")
+        self.data = Data()
         self.oauth = OAuth2Util.OAuth2Util(self.reddit, configfile=OAUTH_CONF_FILE)
-        print("authentication complete")
         self.oauth.refresh(force=True)
-        if os.path.isfile(STATE_DATA):
-            self.load_data()
-        else:
-            self.data = Data()
-        self._retrieve_moderators()
+        print("loading bot data")
+        self.load_bot_data()
+        print("loaded, user list is: " + str(self.data.user_list))
+        self.load_submissions()
         print(self.data.get_user_names_by_auth(User.AUTH_ADMIN))
-        self.load_data()
-        self.database.write_bot_data(self.data)
     
     def save_data(self):
-        with open(STATE_DATA, 'wb') as output_file:
-            pickle.dump(self.data, output_file, pickle.HIGHEST_PROTOCOL)
+        self.database.write_bot_data(self.data)
 
+    def load_bot_data(self):
+        new_data = Data()
+        bot_data = self.database.get_latest_bot_data()
+        if(bot_data):
+            new_data.week = bot_data['week']
+            new_data.user_index = bot_data['user_index']
+            new_data.post_day = bot_data['post_day']
+            new_data.posted_today = bot_data['posted_today']
+            new_data.user_list = self.database.get_users()
+        else:
+            new_data.week = 0
+            new_data.user_index = 0
+            new_data.post_day = "Monday"
+            new_data.posted_today = False
+            new_data.user_list = self._new_user_list(self._retrieve_moderators())
+        self.data = new_data
+
+    def load_submissions(self):
+        self.submissions = self.database.get_upcoming_submissions(10)
+
+    def _parse_user_list(self, user_list):
+        mod_list = self._retrieve_moderators()
+        new_user_list = []
+        print("modlist: " + str(mod_list))
+        for user in user_list:
+            new_user_list.append(User(user['name'], user['auth']))
+            print("returning new user list: " + str(new_user_list))
+        return new_user_list
+
+    def _new_user_list(self, user_names):
+        new_user_list = []
+        for name in user_names:
+            new_user_list.append(User(name, User.AUTH_ADMIN))
+        return new_user_list
+        
     #TODO: test this
     def _retrieve_moderators(self):
-        user_list = self.data.get_user_names()
-        state_mod_list = self.data.get_user_names_by_auth(User.AUTH_ADMIN)
+        moderators = []
         mod_list = self.reddit.get_subreddit(SUBREDDIT).get_moderators()
-
         for mod in mod_list:
-            print("Processing mod: " + mod.name)
-            if mod.name not in user_list:
-                self.data.add_user(mod.name, User.AUTH_ADMIN)
-            elif mod.name not in state_mod_list:
-                self.data.elevate_user(mod, User.AUTH_ADMIN)
+            moderators.append(mod.name)
+        return moderators
     
     def check_messages(self):
         messages = self.reddit.get_unread(limit=None)
@@ -142,7 +186,7 @@ class Bot:
             if time.strftime("%A") == self.data.post_day:
                 self._post_album()
                 self.data.posted_today = True
-        elif time.strftime("%A") != event.post_day and self.data.posted_today:
+        elif time.strftime("%A") != self.data.post_day and self.data.posted_today:
             self.data.posted_today = False
     
     def _authenticate_user(self, name, level):
@@ -326,7 +370,6 @@ class Data:
         data_dictionary = {}
         data_dictionary["week"] = self.week
         data_dictionary["user_index"] = self.user_index
-        data_dictionary["user_list"] = self.get_user_names_string()
         data_dictionary["post_day"] = self.post_day
         data_dictionary["posted_today"] = self.posted_today
         return data_dictionary
@@ -335,7 +378,7 @@ class User:
     AUTH_DEFAULT = 0
     AUTH_ADMIN = 1
 
-    def __init__(self, name, auth_level):
+    def __init__(self, name="", auth_level=0):
         self.name = name
         self.auth_level = auth_level #TODO: update _add_user to this
         self.submissions = []
@@ -345,6 +388,12 @@ class User:
             return "Error: You have reached your max submissions. Please wait for your turn to come around before submitting again!"
         self.submissions.append(Submission(new_album))
         return True
+
+    def get_dict(self):
+        new_dict = {}
+        new_dict['name'] = self.name
+        new_dict['auth'] = self.auth_level
+        return new_dict
 
 class Submission:
     def __init__(self, args, user):
@@ -439,7 +488,7 @@ class Album_Retriever:
         return album_details
 
 ##########MAIN###########
-bot = Bot(USER_AGENT, USER_NAME)
+bot = Bot(USER_AGENT)
 while True:
     bot.check_messages()
     bot.check_events()
