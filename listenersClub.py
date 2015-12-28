@@ -30,11 +30,11 @@ class DatabaseWrapper:
         archived_collection.insert_one(submission)
 
     def get_upcoming_submissions(self):
-        upcomining_submissions = self.database[Util.SUBMISSONS_COLLECTION]
+        upcoming_submissions = self.database[Util.SUBMISSONS_COLLECTION]
         return upcomining_submissions.find()
 
     def insert_upcoming_submission(self, submission):
-        upcomining_submissions = self.database[Util.SUBMISSONS_COLLECTION]
+        upcoming_submissions = self.database[Util.SUBMISSONS_COLLECTION]
         upcoming_submissions.insert_one(submission)
 
     def get_latest_bot_data(self):
@@ -109,16 +109,12 @@ class Bot:
             self.data = Data()
         self._retrieve_moderators()
         print(self.data.get_user_names_by_auth(User.AUTH_ADMIN))
+        self.load_data()
         self.database.write_bot_data(self.data)
     
     def save_data(self):
         with open(STATE_DATA, 'wb') as output_file:
             pickle.dump(self.data, output_file, pickle.HIGHEST_PROTOCOL)
-
-    def load_data(self):
-        # reload data from database using database wrapper
-        with open(STATE_DATA, 'rb') as input_file:
-            self.data = pickle.load(input_file)
 
     #TODO: test this
     def _retrieve_moderators(self):
@@ -213,7 +209,6 @@ class Bot:
                 self.data.user_index += 1
                 if self.data.user_index == len(self.data.user_list):
                     self.data.user_index = 0
-
     
     def _parse_command(self, msg):
         cmd = msg.subject
