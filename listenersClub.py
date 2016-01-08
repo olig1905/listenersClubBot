@@ -35,7 +35,7 @@ class DatabaseWrapper:
         user_collection = self.database[Util.USER_COLLECTION]
         for user in users:
             cur_user_name = user.name
-            user_exists = user_collection.find_one({"name":"cur_user_name"})
+            user_exists = user_collection.find_one({"name":cur_user_name})
             if not user_exists:
                 user_collection.insert_one(user.get_dict())            
 
@@ -121,9 +121,7 @@ class Bot:
         self.data = Data()
         self.oauth = OAuth2Util.OAuth2Util(self.reddit, configfile=OAUTH_CONF_FILE)
         self.oauth.refresh(force=True)
-        print("loading bot data")
         self.load_bot_data()
-        print("loaded, user list is: " + str(self.data.user_list))
         self.load_submissions()
         print(self.data.get_user_names_by_auth(User.AUTH_ADMIN))
     
@@ -138,13 +136,18 @@ class Bot:
             new_data.user_index = bot_data['user_index']
             new_data.post_day = bot_data['post_day']
             new_data.posted_today = bot_data['posted_today']
-            new_data.user_list = self.database.get_users()
         else:
             new_data.week = 0
             new_data.user_index = 0
             new_data.post_day = "Monday"
             new_data.posted_today = False
-            new_data.user_list = self._new_user_list(self._retrieve_moderators())
+        #now we get the user list. it's input into the DB as a dictionary
+        new_user_list = self.database.get_users()
+        if not len(new_user_list):
+            new_user_list = self._new_user_list(self._retrieve_moderators())
+        else:
+            new_user_list = self._parse_user_list(new_user_list)
+        new_data.user_list = new_user_list
         self.data = new_data
 
     def load_submissions(self):
@@ -153,10 +156,8 @@ class Bot:
     def _parse_user_list(self, user_list):
         mod_list = self._retrieve_moderators()
         new_user_list = []
-        print("modlist: " + str(mod_list))
         for user in user_list:
             new_user_list.append(User(user['name'], user['auth']))
-            print("returning new user list: " + str(new_user_list))
         return new_user_list
 
     def _new_user_list(self, user_names):
